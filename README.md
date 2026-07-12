@@ -50,6 +50,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Literature Claim Extraction Template](references/literature-claim-extraction-template.md)
 
+- [Experimental Condition Comparison](templates/experimental-condition-comparison.md)
+
 ## Repository Topics
 
 ```text
@@ -92,3 +94,4 @@ LICENSE
 - Add project-specific examples to the validation metric selection guide.
 - Add project-specific examples to the uncertainty review checklist.
 - Add project-specific examples to the literature claim extraction template.
+- Add project-specific examples to the experimental condition comparison.
