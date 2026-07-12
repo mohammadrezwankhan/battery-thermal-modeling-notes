@@ -5,7 +5,8 @@
 - Title: Li-Ion Battery Thermal Characterization for Thermal Management Design
 - Authors: Aron Saxon, Chuanbo Yang, Shriram Santhanagopalan, Matthew Keyser, Andrew Colclasure
 - Year: 2024
-- Link: https://www.nrel.gov/docs/fy24osti/89032.pdf
+- DOI: 10.3390/batteries10040136
+- NREL publication number: NREL/JA-5700-89032
 
 ## Problem
 
