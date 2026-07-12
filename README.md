@@ -21,6 +21,7 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - [Thermal assumptions example table](notes/thermal-assumptions-example-table.md)
 - [Thermal validation example result summary](notes/thermal-validation-example-result-summary.md)
 - [Battery thermal validation checklist](templates/validation-checklist.md)
+- [BTMS source checklist](templates/btms-source-checklist.md)
 - [Reading log template](references/reading-log-template.md)
 - [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
 
@@ -50,4 +51,5 @@ LICENSE
 - Add mitigation examples to the thermal model limitations note.
 - Adapt the thermal assumptions example table for a sourced case study.
 - Replace the thermal validation example summary with a sourced case study.
+- Add source-backed BTMS claim examples to the BTMS source checklist.
 - Improve validation checklist wording with units and boundary conditions.
