@@ -56,6 +56,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Material Property Source Register](templates/material-property-source-register.md)
 
+- [Transient Vs Steady State Guide](notes/transient-vs-steady-state-guide.md)
+
 ## Repository Topics
 
 ```text
@@ -101,3 +103,4 @@ LICENSE
 - Add project-specific examples to the experimental condition comparison.
 - Add project-specific examples to the thermal model change log.
 - Add project-specific examples to the material property source register.
+- Add project-specific examples to the transient vs steady state guide.
