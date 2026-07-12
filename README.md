@@ -38,6 +38,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Sensor Placement Review Template](templates/sensor-placement-review-template.md)
 
+- [Thermal Runaway Scope Boundary](notes/thermal-runaway-scope-boundary.md)
+
 ## Repository Topics
 
 ```text
@@ -74,3 +76,4 @@ LICENSE
 - Add project-specific examples to the cell to pack scaling note.
 - Add project-specific examples to the ambient boundary condition log.
 - Add project-specific examples to the sensor placement review template.
+- Add project-specific examples to the thermal runaway scope boundary.
