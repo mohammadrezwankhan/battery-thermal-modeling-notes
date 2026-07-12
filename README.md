@@ -1,5 +1,7 @@
 # Battery Thermal Modeling Notes
 
+[![Markdown maintenance](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml/badge.svg)](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml)
+
 Research-backed notes and reproducible examples for battery thermal behavior, BTMS design thinking, and validation assumptions.
 
 ## Focus Areas
@@ -33,3 +35,10 @@ README.md
 CONTRIBUTING.md
 LICENSE
 ```
+
+## Contribution Entry Points
+
+- Add a public reading-log entry.
+- Add a BTMS architecture comparison table.
+- Add a note on heat generation model selection.
+- Improve validation checklist wording with units and boundary conditions.
