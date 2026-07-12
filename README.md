@@ -30,6 +30,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Cooling Loop Assumption Register](templates/cooling-loop-assumption-register.md)
 
+- [Thermal Test Data Quality Checklist](templates/thermal-test-data-quality-checklist.md)
+
 ## Repository Topics
 
 ```text
@@ -62,3 +64,4 @@ LICENSE
 - Add real project decisions to the thermal validation decision log.
 - Add project-specific examples to the thermal parameter traceability matrix.
 - Add project-specific examples to the cooling loop assumption register.
+- Add project-specific examples to the thermal test data quality checklist.
