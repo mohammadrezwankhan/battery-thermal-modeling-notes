@@ -62,6 +62,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Temperature Limit Rationale Note](notes/temperature-limit-rationale-note.md)
 
+- [Data Gap Triage Checklist](templates/data-gap-triage-checklist.md)
+
 ## Repository Topics
 
 ```text
@@ -110,3 +112,4 @@ LICENSE
 - Add project-specific examples to the transient vs steady state guide.
 - Add project-specific examples to the cooling strategy trade study.
 - Add project-specific examples to the temperature limit rationale note.
+- Add project-specific examples to the data gap triage checklist.
