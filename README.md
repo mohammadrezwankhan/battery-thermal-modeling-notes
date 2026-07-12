@@ -34,6 +34,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Cell To Pack Scaling Note](notes/cell-to-pack-scaling-note.md)
 
+- [Ambient Boundary Condition Log](templates/ambient-boundary-condition-log.md)
+
 ## Repository Topics
 
 ```text
@@ -68,3 +70,4 @@ LICENSE
 - Add project-specific examples to the cooling loop assumption register.
 - Add project-specific examples to the thermal test data quality checklist.
 - Add project-specific examples to the cell to pack scaling note.
+- Add project-specific examples to the ambient boundary condition log.
