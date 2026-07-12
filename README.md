@@ -36,6 +36,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Ambient Boundary Condition Log](templates/ambient-boundary-condition-log.md)
 
+- [Sensor Placement Review Template](templates/sensor-placement-review-template.md)
+
 ## Repository Topics
 
 ```text
@@ -71,3 +73,4 @@ LICENSE
 - Add project-specific examples to the thermal test data quality checklist.
 - Add project-specific examples to the cell to pack scaling note.
 - Add project-specific examples to the ambient boundary condition log.
+- Add project-specific examples to the sensor placement review template.
