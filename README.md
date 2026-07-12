@@ -60,6 +60,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Cooling Strategy Trade Study](notes/cooling-strategy-trade-study.md)
 
+- [Temperature Limit Rationale Note](notes/temperature-limit-rationale-note.md)
+
 ## Repository Topics
 
 ```text
@@ -107,3 +109,4 @@ LICENSE
 - Add project-specific examples to the material property source register.
 - Add project-specific examples to the transient vs steady state guide.
 - Add project-specific examples to the cooling strategy trade study.
+- Add project-specific examples to the temperature limit rationale note.
