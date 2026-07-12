@@ -46,6 +46,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Validation Metric Selection Guide](notes/validation-metric-selection-guide.md)
 
+- [Uncertainty Review Checklist](templates/uncertainty-review-checklist.md)
+
 ## Repository Topics
 
 ```text
@@ -86,3 +88,4 @@ LICENSE
 - Add project-specific examples to the btms control assumption table.
 - Add project-specific examples to the heat rejection pathway map.
 - Add project-specific examples to the validation metric selection guide.
+- Add project-specific examples to the uncertainty review checklist.
