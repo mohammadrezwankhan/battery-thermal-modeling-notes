@@ -28,6 +28,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - [Reading log template](references/reading-log-template.md)
 - [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
 
+- [Cooling Loop Assumption Register](templates/cooling-loop-assumption-register.md)
+
 ## Repository Topics
 
 ```text
@@ -59,3 +61,4 @@ LICENSE
 - Improve validation checklist wording with units and boundary conditions.
 - Add real project decisions to the thermal validation decision log.
 - Add project-specific examples to the thermal parameter traceability matrix.
+- Add project-specific examples to the cooling loop assumption register.
