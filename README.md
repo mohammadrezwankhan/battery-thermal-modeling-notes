@@ -17,6 +17,7 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - [Battery thermal modeling assumptions](notes/modeling-assumptions.md)
 - [BTMS architecture comparison](notes/btms-architecture-comparison.md)
 - [Heat-generation model selection](notes/heat-generation-model-selection.md)
+- [Thermal assumptions example table](notes/thermal-assumptions-example-table.md)
 - [Battery thermal validation checklist](templates/validation-checklist.md)
 - [Reading log template](references/reading-log-template.md)
 - [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
@@ -44,4 +45,5 @@ LICENSE
 - Add a public reading-log entry.
 - Extend the BTMS architecture comparison with source-backed examples.
 - Add source-backed examples to the heat-generation model selection note.
+- Adapt the thermal assumptions example table for a sourced case study.
 - Improve validation checklist wording with units and boundary conditions.
