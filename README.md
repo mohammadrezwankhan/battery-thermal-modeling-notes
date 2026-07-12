@@ -24,6 +24,7 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - [Battery thermal validation checklist](templates/validation-checklist.md)
 - [BTMS source checklist](templates/btms-source-checklist.md)
 - [Thermal validation decision log](templates/thermal-validation-decision-log.md)
+- [Thermal parameter traceability matrix](templates/thermal-parameter-traceability-matrix.md)
 - [Reading log template](references/reading-log-template.md)
 - [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
 
@@ -57,3 +58,4 @@ LICENSE
 - Add source-backed BTMS claim examples to the BTMS source checklist.
 - Improve validation checklist wording with units and boundary conditions.
 - Add real project decisions to the thermal validation decision log.
+- Add project-specific examples to the thermal parameter traceability matrix.
