@@ -64,6 +64,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Data Gap Triage Checklist](templates/data-gap-triage-checklist.md)
 
+- [Validation Readiness Review](templates/validation-readiness-review.md)
+
 ## Repository Topics
 
 ```text
@@ -113,3 +115,4 @@ LICENSE
 - Add project-specific examples to the cooling strategy trade study.
 - Add project-specific examples to the temperature limit rationale note.
 - Add project-specific examples to the data gap triage checklist.
+- Add project-specific examples to the validation readiness review.
