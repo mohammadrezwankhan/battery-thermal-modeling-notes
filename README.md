@@ -10,6 +10,12 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - Validation checklists for simulation claims.
 - Reading notes from public literature.
 
+## Starter Notes
+
+- [Battery thermal modeling assumptions](notes/modeling-assumptions.md)
+- [Battery thermal validation checklist](templates/validation-checklist.md)
+- [Reading log template](references/reading-log-template.md)
+
 ## Repository Topics
 
 ```text
