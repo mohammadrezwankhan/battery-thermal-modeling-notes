@@ -42,6 +42,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [BTMS Control Assumption Table](templates/btms-control-assumption-table.md)
 
+- [Heat Rejection Pathway Map](notes/heat-rejection-pathway-map.md)
+
 ## Repository Topics
 
 ```text
@@ -80,3 +82,4 @@ LICENSE
 - Add project-specific examples to the sensor placement review template.
 - Add project-specific examples to the thermal runaway scope boundary.
 - Add project-specific examples to the btms control assumption table.
+- Add project-specific examples to the heat rejection pathway map.
