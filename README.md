@@ -52,6 +52,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Experimental Condition Comparison](templates/experimental-condition-comparison.md)
 
+- [Thermal Model Change Log](templates/thermal-model-change-log.md)
+
 ## Repository Topics
 
 ```text
@@ -95,3 +97,4 @@ LICENSE
 - Add project-specific examples to the uncertainty review checklist.
 - Add project-specific examples to the literature claim extraction template.
 - Add project-specific examples to the experimental condition comparison.
+- Add project-specific examples to the thermal model change log.
