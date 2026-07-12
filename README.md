@@ -66,6 +66,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Validation Readiness Review](templates/validation-readiness-review.md)
 
+- [Research Next Questions Log](references/research-next-questions-log.md)
+
 ## Repository Topics
 
 ```text
@@ -116,3 +118,4 @@ LICENSE
 - Add project-specific examples to the temperature limit rationale note.
 - Add project-specific examples to the data gap triage checklist.
 - Add project-specific examples to the validation readiness review.
+- Add project-specific examples to the research next questions log.
