@@ -17,6 +17,7 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - [Battery thermal modeling assumptions](notes/modeling-assumptions.md)
 - [Battery thermal validation checklist](templates/validation-checklist.md)
 - [Reading log template](references/reading-log-template.md)
+- [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
 
 ## Repository Topics
 
