@@ -40,6 +40,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Thermal Runaway Scope Boundary](notes/thermal-runaway-scope-boundary.md)
 
+- [BTMS Control Assumption Table](templates/btms-control-assumption-table.md)
+
 ## Repository Topics
 
 ```text
@@ -77,3 +79,4 @@ LICENSE
 - Add project-specific examples to the ambient boundary condition log.
 - Add project-specific examples to the sensor placement review template.
 - Add project-specific examples to the thermal runaway scope boundary.
+- Add project-specific examples to the btms control assumption table.
