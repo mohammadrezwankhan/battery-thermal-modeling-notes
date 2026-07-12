@@ -48,6 +48,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 
 - [Uncertainty Review Checklist](templates/uncertainty-review-checklist.md)
 
+- [Literature Claim Extraction Template](references/literature-claim-extraction-template.md)
+
 ## Repository Topics
 
 ```text
@@ -89,3 +91,4 @@ LICENSE
 - Add project-specific examples to the heat rejection pathway map.
 - Add project-specific examples to the validation metric selection guide.
 - Add project-specific examples to the uncertainty review checklist.
+- Add project-specific examples to the literature claim extraction template.
