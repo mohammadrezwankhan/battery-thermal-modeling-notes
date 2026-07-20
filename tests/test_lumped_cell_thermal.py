@@ -53,6 +53,68 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertLess(result.energy_balance_error_j, 1e-8)
         self.assertGreater(result.temperature_c[300], result.temperature_c[-1])
 
+    def test_default_resistance_trace_remains_constant(self):
+        result = simulate_lumped_temperature([75.0] * 120)
+        self.assertEqual(result.resistance_ohm, (0.004,) * 120)
+        self.assertTrue(
+            all(
+                math.isclose(heat_w, 75.0**2 * 0.004)
+                for heat_w in result.heat_generation_w
+            )
+        )
+
+    def test_temperature_feedback_matches_closed_form_discrete_solution(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            resistance_ohm=0.01,
+            resistance_temperature_coefficient_per_k=0.02,
+            resistance_reference_temperature_c=25.0,
+            heat_transfer_w_per_k=0.0,
+            ambient_temperature_c=25.0,
+            initial_temperature_c=25.0,
+            time_step_s=1.0,
+        )
+        current_a = 100.0
+        intervals = 100
+        result = simulate_lumped_temperature([current_a] * intervals, spec)
+        base_step_c = (
+            current_a**2
+            * spec.resistance_ohm
+            * spec.time_step_s
+            / spec.thermal_capacity_j_per_k
+        )
+        recurrence_factor = (
+            1.0 + base_step_c * spec.resistance_temperature_coefficient_per_k
+        )
+        expected_rise_c = (
+            base_step_c
+            * (recurrence_factor**intervals - 1.0)
+            / (recurrence_factor - 1.0)
+        )
+        self.assertAlmostEqual(
+            result.temperature_c[-1],
+            spec.initial_temperature_c + expected_rise_c,
+            places=10,
+        )
+        self.assertEqual(result.resistance_ohm[0], spec.resistance_ohm)
+        self.assertGreater(result.resistance_ohm[-1], result.resistance_ohm[0])
+        self.assertLess(result.energy_balance_error_j, 1e-8)
+
+    def test_positive_temperature_coefficient_increases_peak_temperature(self):
+        constant = simulate_lumped_temperature([100.0] * 600)
+        feedback = simulate_lumped_temperature(
+            [100.0] * 600,
+            LumpedThermalSpec(
+                resistance_temperature_coefficient_per_k=0.01,
+            ),
+        )
+        self.assertGreater(feedback.peak_temperature_c, constant.peak_temperature_c)
+        self.assertGreater(
+            feedback.heat_generation_w[-1],
+            constant.heat_generation_w[-1],
+        )
+
     def test_smaller_time_step_converges_for_constant_current(self):
         coarse = simulate_lumped_temperature([75.0] * 600)
         fine_spec = LumpedThermalSpec(time_step_s=0.5)
@@ -69,6 +131,21 @@ class LumpedCellThermalTests(unittest.TestCase):
             simulate_lumped_temperature(
                 [10.0],
                 LumpedThermalSpec(resistance_ohm=-0.01),
+            )
+        with self.assertRaisesRegex(ValueError, "coefficient_per_k must be finite"):
+            simulate_lumped_temperature(
+                [10.0],
+                LumpedThermalSpec(
+                    resistance_temperature_coefficient_per_k=math.nan,
+                ),
+            )
+        with self.assertRaisesRegex(ValueError, "must remain nonnegative"):
+            simulate_lumped_temperature(
+                [10.0],
+                LumpedThermalSpec(
+                    initial_temperature_c=40.0,
+                    resistance_temperature_coefficient_per_k=-0.10,
+                ),
             )
 
     def test_rejects_empty_or_nonfinite_current_profiles(self):
@@ -142,6 +219,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertEqual(float(rows[0]["current_a"]), 50.0)
         self.assertEqual(float(rows[0]["ambient_temperature_c"]), 25.0)
+        self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
         self.assertAlmostEqual(
             sum(float(row["net_heat_j"]) for row in rows),
             result.integrated_net_heat_j,
@@ -169,6 +247,27 @@ class LumpedCellThermalTests(unittest.TestCase):
             self.assertTrue(output_path.is_file())
             self.assertIn("Intervals: 3", standard_output.getvalue())
             self.assertIn("Duration: 180.000 s", standard_output.getvalue())
+
+    def test_cli_reports_temperature_dependent_resistance_range(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a",
+                    "100",
+                    "--duration-s",
+                    "120",
+                    "--resistance-temperature-coefficient-per-k",
+                    "0.01",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        output = standard_output.getvalue()
+        self.assertIn("Resistance range: 0.004000 to ", output)
+        upper_resistance = float(
+            output.split("Resistance range: 0.004000 to ", 1)[1].split(" ", 1)[0]
+        )
+        self.assertGreater(upper_resistance, 0.004)
 
     def test_cli_uses_profile_ambient_in_export(self):
         with tempfile.TemporaryDirectory() as directory:
