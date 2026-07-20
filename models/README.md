@@ -41,6 +41,32 @@ Run the regression checks with:
 python -m unittest discover -s tests -v
 ```
 
+## Run A Current Profile
+
+The CLI accepts a strict two-column CSV containing interval-start timestamps
+and current commands. Timestamps must start at zero and use one uniform step;
+positive and negative currents both produce irreversible `I^2 R` heat.
+
+```csv
+time_s,current_a
+0,0
+60,75
+120,-50
+```
+
+Run the committed pulse example and export one auditable row per interval:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/pulse_current_profile.csv `
+  --output-csv results/pulse_thermal_intervals.csv
+```
+
+The output records interval boundaries, current, start/end temperature,
+generated and rejected heat rates, and net interval heat. Profile mode derives
+the time step from the CSV and rejects `--current-a`, `--duration-s`, or
+`--time-step-s` overrides.
+
 ## Explicit Limitations
 
 - Resistance is constant and does not vary with SOC, temperature, or age.
@@ -51,3 +77,5 @@ python -m unittest discover -s tests -v
 - Electrical SOC and voltage dynamics are outside this reference model.
 - Parameters are educational placeholders and require sourced replacement for
   engineering decisions.
+- Current-profile timestamps are treated as interval starts with piecewise
+  constant current over each interval.
