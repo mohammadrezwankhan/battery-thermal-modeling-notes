@@ -100,12 +100,16 @@ python models/lumped_cell_thermal.py --current-a 75 --duration-s 600
 python models/lumped_cell_thermal.py `
   --profile-csv models/data/pulse_current_profile.csv `
   --output-csv results/pulse_thermal_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/ambient_step_current_profile.csv `
+  --output-csv results/ambient_step_thermal_intervals.csv
 python -m unittest discover -s tests -v
 ```
 
 See the [model assumptions and limitations](models/README.md) before adapting
 the parameters or using the output in an engineering review. The profile path
-supports traceable charge/discharge duty cycles and interval-level CSV results.
+supports traceable charge/discharge duty cycles, optional interval ambient
+temperature, and interval-level CSV results.
 
 ## Contribution Entry Points
 

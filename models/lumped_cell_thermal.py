@@ -57,6 +57,7 @@ class ThermalSimulation:
     time_s: tuple[float, ...]
     temperature_c: tuple[float, ...]
     current_a: tuple[float, ...]
+    ambient_temperature_c: tuple[float, ...]
     heat_generation_w: tuple[float, ...]
     heat_rejection_w: tuple[float, ...]
     thermal_capacity_j_per_k: float
@@ -90,20 +91,29 @@ class ThermalSimulation:
 
 @dataclass(frozen=True)
 class CurrentProfile:
-    """Uniform interval-start timestamps and cell current commands."""
+    """Uniform interval-start timestamps, current, and optional ambient."""
 
     time_s: tuple[float, ...]
     current_a: tuple[float, ...]
+    ambient_temperature_c: tuple[float, ...] | None
     time_step_s: float
 
 
 def load_current_profile(path: Path) -> CurrentProfile:
-    """Load a strict time_s,current_a CSV on a uniform interval grid."""
+    """Load a strict current profile with an optional ambient column."""
 
     with path.open("r", encoding="utf-8", newline="") as profile_file:
         reader = csv.DictReader(profile_file)
-        if reader.fieldnames != ["time_s", "current_a"]:
-            raise ValueError("profile CSV header must be exactly: time_s,current_a")
+        supported_headers = (
+            ["time_s", "current_a"],
+            ["time_s", "current_a", "ambient_temperature_c"],
+        )
+        if reader.fieldnames not in supported_headers:
+            raise ValueError(
+                "profile CSV header must be exactly: time_s,current_a or "
+                "time_s,current_a,ambient_temperature_c"
+            )
+        has_ambient = "ambient_temperature_c" in reader.fieldnames
         rows = list(reader)
 
     if len(rows) < 2:
@@ -111,18 +121,27 @@ def load_current_profile(path: Path) -> CurrentProfile:
 
     times: list[float] = []
     currents: list[float] = []
+    ambient_temperatures: list[float] = []
     for line_number, row in enumerate(rows, start=2):
         try:
             time_s = float(row["time_s"])
             current_a = float(row["current_a"])
+            ambient_temperature_c = (
+                float(row["ambient_temperature_c"]) if has_ambient else None
+            )
         except (TypeError, ValueError) as error:
             raise ValueError(
                 f"profile CSV line {line_number} must contain numeric values"
             ) from error
-        if not math.isfinite(time_s) or not math.isfinite(current_a):
+        values = [time_s, current_a]
+        if ambient_temperature_c is not None:
+            values.append(ambient_temperature_c)
+        if None in row or any(not math.isfinite(value) for value in values):
             raise ValueError(f"profile CSV line {line_number} must be finite")
         times.append(time_s)
         currents.append(current_a)
+        if ambient_temperature_c is not None:
+            ambient_temperatures.append(ambient_temperature_c)
 
     if not math.isclose(times[0], 0.0, rel_tol=0.0, abs_tol=1e-12):
         raise ValueError("profile CSV time_s must start at zero")
@@ -148,6 +167,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
     return CurrentProfile(
         time_s=tuple(times),
         current_a=tuple(currents),
+        ambient_temperature_c=(tuple(ambient_temperatures) if has_ambient else None),
         time_step_s=time_step_s,
     )
 
@@ -155,6 +175,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
 def simulate_lumped_temperature(
     currents_a: Sequence[float],
     spec: LumpedThermalSpec = LumpedThermalSpec(),
+    ambient_temperatures_c: Sequence[float] | None = None,
 ) -> ThermalSimulation:
     """Integrate a one-node thermal balance with explicit Euler steps."""
 
@@ -165,16 +186,29 @@ def simulate_lumped_temperature(
     if any(not math.isfinite(current) for current in currents):
         raise ValueError("all current values must be finite")
 
+    if ambient_temperatures_c is None:
+        ambient_temperatures = (spec.ambient_temperature_c,) * len(currents)
+    else:
+        ambient_temperatures = tuple(
+            float(temperature) for temperature in ambient_temperatures_c
+        )
+        if len(ambient_temperatures) != len(currents):
+            raise ValueError(
+                "ambient_temperatures_c must contain one value per current interval"
+            )
+        if any(not math.isfinite(value) for value in ambient_temperatures):
+            raise ValueError("all ambient temperature values must be finite")
+
     temperatures = [spec.initial_temperature_c]
     generated_heat: list[float] = []
     rejected_heat: list[float] = []
 
-    for current in currents:
+    for current, ambient_temperature_c in zip(
+        currents, ambient_temperatures, strict=True
+    ):
         temperature = temperatures[-1]
         generation_w = current * current * spec.resistance_ohm
-        rejection_w = spec.heat_transfer_w_per_k * (
-            temperature - spec.ambient_temperature_c
-        )
+        rejection_w = spec.heat_transfer_w_per_k * (temperature - ambient_temperature_c)
         temperature_change_c = (
             (generation_w - rejection_w)
             * spec.time_step_s
@@ -190,6 +224,7 @@ def simulate_lumped_temperature(
         time_s=times,
         temperature_c=tuple(temperatures),
         current_a=currents,
+        ambient_temperature_c=ambient_temperatures,
         heat_generation_w=tuple(generated_heat),
         heat_rejection_w=tuple(rejected_heat),
         thermal_capacity_j_per_k=spec.thermal_capacity_j_per_k,
@@ -205,6 +240,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "interval_start_s",
         "interval_end_s",
         "current_a",
+        "ambient_temperature_c",
         "start_temperature_c",
         "end_temperature_c",
         "heat_generation_w",
@@ -221,6 +257,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "interval_start_s": result.time_s[index],
                 "interval_end_s": result.time_s[index + 1],
                 "current_a": current_a,
+                "ambient_temperature_c": result.ambient_temperature_c[index],
                 "start_temperature_c": result.temperature_c[index],
                 "end_temperature_c": result.temperature_c[index + 1],
                 "heat_generation_w": generated_w,
@@ -243,7 +280,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--time-step-s", type=float)
     parser.add_argument("--resistance-ohm", type=float, default=0.004)
     parser.add_argument("--heat-transfer-w-per-k", type=float, default=1.2)
-    parser.add_argument("--ambient-temperature-c", type=float, default=25.0)
+    parser.add_argument("--ambient-temperature-c", type=float)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
     parser.add_argument("--specific-heat-j-per-kg-k", type=float, default=1000.0)
@@ -252,6 +289,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    ambient_temperatures_c = None
     if args.profile_csv:
         conflicting = [
             name
@@ -262,7 +300,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             options = ", ".join(f"--{name.replace('_', '-')}" for name in conflicting)
             raise ValueError(f"--profile-csv cannot be combined with {options}")
         profile = load_current_profile(args.profile_csv)
+        if (
+            profile.ambient_temperature_c is not None
+            and args.ambient_temperature_c is not None
+        ):
+            raise ValueError(
+                "--ambient-temperature-c cannot be combined with a profile "
+                "that contains ambient_temperature_c"
+            )
         currents = profile.current_a
+        ambient_temperatures_c = profile.ambient_temperature_c
         time_step_s = profile.time_step_s
     else:
         current_a = 75.0 if args.current_a is None else args.current_a
@@ -283,16 +330,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise ValueError("duration_s must be an integer multiple of time_step_s")
         currents = (current_a,) * intervals
 
+    ambient_temperature_c = (
+        25.0 if args.ambient_temperature_c is None else args.ambient_temperature_c
+    )
     spec = LumpedThermalSpec(
         mass_kg=args.mass_kg,
         specific_heat_j_per_kg_k=args.specific_heat_j_per_kg_k,
         resistance_ohm=args.resistance_ohm,
         heat_transfer_w_per_k=args.heat_transfer_w_per_k,
-        ambient_temperature_c=args.ambient_temperature_c,
+        ambient_temperature_c=ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
         time_step_s=time_step_s,
     )
-    result = simulate_lumped_temperature(currents, spec)
+    result = simulate_lumped_temperature(currents, spec, ambient_temperatures_c)
 
     if args.output_csv:
         write_simulation_csv(args.output_csv, result)
