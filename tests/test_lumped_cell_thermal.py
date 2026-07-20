@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import contextlib
+import csv
+import io
 import math
+import tempfile
 import unittest
+from pathlib import Path
 
 from models.lumped_cell_thermal import (
     LumpedThermalSpec,
+    load_current_profile,
+    main,
     simulate_lumped_temperature,
+    write_simulation_csv,
 )
 
 
@@ -22,8 +30,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         result = simulate_lumped_temperature([current_a] * intervals, spec)
 
         steady_rise_c = (
-            current_a * current_a * spec.resistance_ohm
-            / spec.heat_transfer_w_per_k
+            current_a * current_a * spec.resistance_ohm / spec.heat_transfer_w_per_k
         )
         decay = 1.0 - (
             spec.heat_transfer_w_per_k
@@ -69,6 +76,78 @@ class LumpedCellThermalTests(unittest.TestCase):
             simulate_lumped_temperature([])
         with self.assertRaisesRegex(ValueError, "current values must be finite"):
             simulate_lumped_temperature([math.nan])
+
+    def test_loads_uniform_csv_current_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a\n0,0\n60,75\n120,-50\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.time_s, (0.0, 60.0, 120.0))
+        self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
+        self.assertEqual(profile.time_step_s, 60.0)
+
+    def test_rejects_invalid_csv_header_and_time_grid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text("time,current\n0,0\n1,10\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "header must be exactly"):
+                load_current_profile(path)
+            path.write_text(
+                "time_s,current_a\n0,0\n1,10\n2.5,20\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "uniform time step"):
+                load_current_profile(path)
+
+    def test_writes_interval_level_energy_records(self):
+        result = simulate_lumped_temperature([50.0, 0.0])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nested" / "result.csv"
+            write_simulation_csv(path, result)
+            with path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(float(rows[0]["current_a"]), 50.0)
+        self.assertAlmostEqual(
+            sum(float(row["net_heat_j"]) for row in rows),
+            result.integrated_net_heat_j,
+        )
+
+    def test_cli_runs_profile_and_exports_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a\n0,0\n60,75\n120,75\n",
+                encoding="utf-8",
+            )
+            standard_output = io.StringIO()
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--output-csv",
+                        str(output_path),
+                    ]
+                )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(output_path.is_file())
+            self.assertIn("Intervals: 3", standard_output.getvalue())
+            self.assertIn("Duration: 180.000 s", standard_output.getvalue())
+
+    def test_profile_mode_rejects_constant_current_options(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            profile_path.write_text(
+                "time_s,current_a\n0,0\n1,10\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cannot be combined"):
+                main(["--profile-csv", str(profile_path), "--current-a", "50"])
 
 
 if __name__ == "__main__":
