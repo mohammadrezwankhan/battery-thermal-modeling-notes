@@ -41,11 +41,13 @@ Run the regression checks with:
 python -m unittest discover -s tests -v
 ```
 
-## Run A Current Profile
+## Run A Current And Ambient Profile
 
 The CLI accepts a strict two-column CSV containing interval-start timestamps
-and current commands. Timestamps must start at zero and use one uniform step;
-positive and negative currents both produce irreversible `I^2 R` heat.
+and current commands, or a three-column CSV that also supplies ambient
+temperature for each interval. Timestamps must start at zero and use one
+uniform step; positive and negative currents both produce irreversible `I^2 R`
+heat.
 
 ```csv
 time_s,current_a
@@ -63,9 +65,22 @@ python models/lumped_cell_thermal.py `
 ```
 
 The output records interval boundaries, current, start/end temperature,
-generated and rejected heat rates, and net interval heat. Profile mode derives
-the time step from the CSV and rejects `--current-a`, `--duration-s`, or
-`--time-step-s` overrides.
+ambient temperature, generated and rejected heat rates, and net interval heat.
+Profile mode derives the time step from the CSV and rejects `--current-a`,
+`--duration-s`, or `--time-step-s` overrides.
+
+Run the ambient-step example to make the thermal boundary condition traceable
+in both the input and exported interval records:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/ambient_step_current_profile.csv `
+  --output-csv results/ambient_step_thermal_intervals.csv
+```
+
+A two-column profile uses `--ambient-temperature-c` or its 25 degC default. A
+three-column profile cannot be combined with that option because the interval
+values are authoritative.
 
 ## Explicit Limitations
 
@@ -73,9 +88,10 @@ the time step from the CSV and rejects `--current-a`, `--duration-s`, or
 - Heat generation contains irreversible ohmic loss only.
 - Reversible entropic heat is excluded.
 - The cell is represented by one uniform temperature state.
-- Heat transfer is linear and ambient temperature is fixed.
+- Heat transfer is linear; ambient may vary by interval, but the heat-transfer
+  coefficient remains fixed.
 - Electrical SOC and voltage dynamics are outside this reference model.
 - Parameters are educational placeholders and require sourced replacement for
   engineering decisions.
 - Current-profile timestamps are treated as interval starts with piecewise
-  constant current over each interval.
+  constant current and ambient temperature over each interval.
