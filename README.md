@@ -1,8 +1,9 @@
 # Battery Thermal Modeling Notes
 
-[![Markdown maintenance](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml/badge.svg)](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml)
+[![Model and Markdown validation](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml/badge.svg)](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml)
 
-Research-backed notes and reproducible examples for battery thermal behavior, BTMS design thinking, and validation assumptions.
+Research-backed notes and reproducible examples for battery thermal behavior,
+BTMS design thinking, and validation assumptions.
 
 ## Focus Areas
 
@@ -13,6 +14,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 - Reading notes from public literature.
 
 ## Starter Notes
+
+- [Executable lumped cell thermal reference](models/README.md)
 
 - [Battery thermal modeling assumptions](notes/modeling-assumptions.md)
 - [BTMS architecture comparison](notes/btms-architecture-comparison.md)
@@ -71,7 +74,8 @@ Research-backed notes and reproducible examples for battery thermal behavior, BT
 ## Repository Topics
 
 ```text
-battery thermal-management btms bms electric-vehicles matlab simulink research-notes battery-modeling
+battery thermal-management btms bms electric-vehicles matlab simulink
+research-notes battery-modeling
 ```
 
 ## Suggested Structure
@@ -85,6 +89,19 @@ README.md
 CONTRIBUTING.md
 LICENSE
 ```
+
+## Run The Executable Reference
+
+The dependency-free lumped model implements irreversible `I^2 R` heating,
+linear heat rejection, and a discrete energy-balance diagnostic:
+
+```powershell
+python models/lumped_cell_thermal.py --current-a 75 --duration-s 600
+python -m unittest discover -s tests -v
+```
+
+See the [model assumptions and limitations](models/README.md) before adapting
+the parameters or using the output in an engineering review.
 
 ## Contribution Entry Points
 
