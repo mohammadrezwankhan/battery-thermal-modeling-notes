@@ -1,6 +1,7 @@
 # Contributing
 
-Contributions should make battery thermal modeling clearer, more reproducible, or easier to validate.
+Contributions should make battery thermal modeling clearer, more reproducible,
+or easier to validate.
 
 ## Good Contributions
 
@@ -15,3 +16,4 @@ Contributions should make battery thermal modeling clearer, more reproducible, o
 - [ ] Units are explicit.
 - [ ] Assumptions are stated.
 - [ ] No copyrighted paper text is copied.
+- [ ] `python -m unittest discover -s tests -v` passes for model changes.
