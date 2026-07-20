@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
 
@@ -86,6 +88,70 @@ class ThermalSimulation:
         return abs(self.stored_energy_change_j - self.integrated_net_heat_j)
 
 
+@dataclass(frozen=True)
+class CurrentProfile:
+    """Uniform interval-start timestamps and cell current commands."""
+
+    time_s: tuple[float, ...]
+    current_a: tuple[float, ...]
+    time_step_s: float
+
+
+def load_current_profile(path: Path) -> CurrentProfile:
+    """Load a strict time_s,current_a CSV on a uniform interval grid."""
+
+    with path.open("r", encoding="utf-8", newline="") as profile_file:
+        reader = csv.DictReader(profile_file)
+        if reader.fieldnames != ["time_s", "current_a"]:
+            raise ValueError("profile CSV header must be exactly: time_s,current_a")
+        rows = list(reader)
+
+    if len(rows) < 2:
+        raise ValueError("profile CSV must contain at least two intervals")
+
+    times: list[float] = []
+    currents: list[float] = []
+    for line_number, row in enumerate(rows, start=2):
+        try:
+            time_s = float(row["time_s"])
+            current_a = float(row["current_a"])
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                f"profile CSV line {line_number} must contain numeric values"
+            ) from error
+        if not math.isfinite(time_s) or not math.isfinite(current_a):
+            raise ValueError(f"profile CSV line {line_number} must be finite")
+        times.append(time_s)
+        currents.append(current_a)
+
+    if not math.isclose(times[0], 0.0, rel_tol=0.0, abs_tol=1e-12):
+        raise ValueError("profile CSV time_s must start at zero")
+    time_step_s = times[1] - times[0]
+    if time_step_s <= 0.0:
+        raise ValueError("profile CSV timestamps must be strictly increasing")
+    for index, (previous, current) in enumerate(
+        zip(times, times[1:], strict=False), start=3
+    ):
+        step = current - previous
+        if step <= 0.0:
+            raise ValueError(
+                f"profile CSV line {index} timestamp must be strictly increasing"
+            )
+        if not math.isclose(
+            step,
+            time_step_s,
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            raise ValueError("profile CSV timestamps must use a uniform time step")
+
+    return CurrentProfile(
+        time_s=tuple(times),
+        current_a=tuple(currents),
+        time_step_s=time_step_s,
+    )
+
+
 def simulate_lumped_temperature(
     currents_a: Sequence[float],
     spec: LumpedThermalSpec = LumpedThermalSpec(),
@@ -131,37 +197,91 @@ def simulate_lumped_temperature(
     )
 
 
-def parse_args() -> argparse.Namespace:
+def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
+    """Write one auditable result row per simulated current interval."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "interval_start_s",
+        "interval_end_s",
+        "current_a",
+        "start_temperature_c",
+        "end_temperature_c",
+        "heat_generation_w",
+        "heat_rejection_w",
+        "net_heat_j",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for index, current_a in enumerate(result.current_a):
+            generated_w = result.heat_generation_w[index]
+            rejected_w = result.heat_rejection_w[index]
+            values = {
+                "interval_start_s": result.time_s[index],
+                "interval_end_s": result.time_s[index + 1],
+                "current_a": current_a,
+                "start_temperature_c": result.temperature_c[index],
+                "end_temperature_c": result.temperature_c[index + 1],
+                "heat_generation_w": generated_w,
+                "heat_rejection_w": rejected_w,
+                "net_heat_j": (generated_w - rejected_w) * result.time_step_s,
+            }
+            writer.writerow(
+                {name: format(value, ".12g") for name, value in values.items()}
+            )
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run a constant-current lumped cell thermal calculation."
+        description="Run a constant-current or CSV-profile cell thermal calculation."
     )
-    parser.add_argument("--current-a", type=float, default=75.0)
-    parser.add_argument("--duration-s", type=float, default=600.0)
-    parser.add_argument("--time-step-s", type=float, default=1.0)
+    parser.add_argument("--profile-csv", type=Path)
+    parser.add_argument("--output-csv", type=Path)
+    parser.add_argument("--current-a", type=float)
+    parser.add_argument("--duration-s", type=float)
+    parser.add_argument("--time-step-s", type=float)
     parser.add_argument("--resistance-ohm", type=float, default=0.004)
     parser.add_argument("--heat-transfer-w-per-k", type=float, default=1.2)
     parser.add_argument("--ambient-temperature-c", type=float, default=25.0)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
     parser.add_argument("--specific-heat-j-per-kg-k", type=float, default=1000.0)
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
-    if args.duration_s <= 0.0:
-        raise ValueError("duration_s must be positive")
-    if args.time_step_s <= 0.0:
-        raise ValueError("time_step_s must be positive")
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
+    if args.profile_csv:
+        conflicting = [
+            name
+            for name in ("current_a", "duration_s", "time_step_s")
+            if getattr(args, name) is not None
+        ]
+        if conflicting:
+            options = ", ".join(f"--{name.replace('_', '-')}" for name in conflicting)
+            raise ValueError(f"--profile-csv cannot be combined with {options}")
+        profile = load_current_profile(args.profile_csv)
+        currents = profile.current_a
+        time_step_s = profile.time_step_s
+    else:
+        current_a = 75.0 if args.current_a is None else args.current_a
+        duration_s = 600.0 if args.duration_s is None else args.duration_s
+        time_step_s = 1.0 if args.time_step_s is None else args.time_step_s
+        if duration_s <= 0.0:
+            raise ValueError("duration_s must be positive")
+        if time_step_s <= 0.0:
+            raise ValueError("time_step_s must be positive")
 
-    intervals = round(args.duration_s / args.time_step_s)
-    if intervals < 1 or not math.isclose(
-        intervals * args.time_step_s,
-        args.duration_s,
-        rel_tol=0.0,
-        abs_tol=1e-9,
-    ):
-        raise ValueError("duration_s must be an integer multiple of time_step_s")
+        intervals = round(duration_s / time_step_s)
+        if intervals < 1 or not math.isclose(
+            intervals * time_step_s,
+            duration_s,
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        ):
+            raise ValueError("duration_s must be an integer multiple of time_step_s")
+        currents = (current_a,) * intervals
 
     spec = LumpedThermalSpec(
         mass_kg=args.mass_kg,
@@ -170,16 +290,22 @@ def main() -> int:
         heat_transfer_w_per_k=args.heat_transfer_w_per_k,
         ambient_temperature_c=args.ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
-        time_step_s=args.time_step_s,
+        time_step_s=time_step_s,
     )
-    result = simulate_lumped_temperature([args.current_a] * intervals, spec)
+    result = simulate_lumped_temperature(currents, spec)
 
-    print(f"Intervals: {intervals}")
+    if args.output_csv:
+        write_simulation_csv(args.output_csv, result)
+
+    print(f"Intervals: {len(currents)}")
+    print(f"Duration: {len(currents) * time_step_s:.3f} s")
     print(f"Final temperature: {result.temperature_c[-1]:.3f} degC")
     print(f"Peak temperature: {result.peak_temperature_c:.3f} degC")
     print(f"Stored thermal energy: {result.stored_energy_change_j:.3f} J")
     print(f"Integrated net heat: {result.integrated_net_heat_j:.3f} J")
     print(f"Energy-balance error: {result.energy_balance_error_j:.6e} J")
+    if args.output_csv:
+        print(f"Interval results: {args.output_csv}")
     return 0
 
 
