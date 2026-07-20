@@ -15,6 +15,8 @@ class LumpedThermalSpec:
     mass_kg: float = 1.05
     specific_heat_j_per_kg_k: float = 1000.0
     resistance_ohm: float = 0.004
+    resistance_temperature_coefficient_per_k: float = 0.0
+    resistance_reference_temperature_c: float = 25.0
     heat_transfer_w_per_k: float = 1.2
     ambient_temperature_c: float = 25.0
     initial_temperature_c: float = 25.0
@@ -29,6 +31,12 @@ class LumpedThermalSpec:
             "mass_kg": self.mass_kg,
             "specific_heat_j_per_kg_k": self.specific_heat_j_per_kg_k,
             "resistance_ohm": self.resistance_ohm,
+            "resistance_temperature_coefficient_per_k": (
+                self.resistance_temperature_coefficient_per_k
+            ),
+            "resistance_reference_temperature_c": (
+                self.resistance_reference_temperature_c
+            ),
             "heat_transfer_w_per_k": self.heat_transfer_w_per_k,
             "ambient_temperature_c": self.ambient_temperature_c,
             "initial_temperature_c": self.initial_temperature_c,
@@ -48,6 +56,21 @@ class LumpedThermalSpec:
             raise ValueError("heat_transfer_w_per_k must be nonnegative")
         if self.time_step_s <= 0.0:
             raise ValueError("time_step_s must be positive")
+        self.resistance_at_temperature(self.initial_temperature_c)
+
+    def resistance_at_temperature(self, temperature_c: float) -> float:
+        """Evaluate the configured linear resistance-temperature relation."""
+
+        if not math.isfinite(temperature_c):
+            raise ValueError("temperature_c must be finite")
+        resistance_factor = 1.0 + (
+            self.resistance_temperature_coefficient_per_k
+            * (temperature_c - self.resistance_reference_temperature_c)
+        )
+        resistance_ohm = self.resistance_ohm * resistance_factor
+        if resistance_ohm < 0.0:
+            raise ValueError("temperature-dependent resistance must remain nonnegative")
+        return resistance_ohm
 
 
 @dataclass(frozen=True)
@@ -58,6 +81,7 @@ class ThermalSimulation:
     temperature_c: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...]
+    resistance_ohm: tuple[float, ...]
     heat_generation_w: tuple[float, ...]
     heat_rejection_w: tuple[float, ...]
     thermal_capacity_j_per_k: float
@@ -202,12 +226,14 @@ def simulate_lumped_temperature(
     temperatures = [spec.initial_temperature_c]
     generated_heat: list[float] = []
     rejected_heat: list[float] = []
+    interval_resistance: list[float] = []
 
     for current, ambient_temperature_c in zip(
         currents, ambient_temperatures, strict=True
     ):
         temperature = temperatures[-1]
-        generation_w = current * current * spec.resistance_ohm
+        resistance_ohm = spec.resistance_at_temperature(temperature)
+        generation_w = current * current * resistance_ohm
         rejection_w = spec.heat_transfer_w_per_k * (temperature - ambient_temperature_c)
         temperature_change_c = (
             (generation_w - rejection_w)
@@ -215,6 +241,7 @@ def simulate_lumped_temperature(
             / spec.thermal_capacity_j_per_k
         )
 
+        interval_resistance.append(resistance_ohm)
         generated_heat.append(generation_w)
         rejected_heat.append(rejection_w)
         temperatures.append(temperature + temperature_change_c)
@@ -225,6 +252,7 @@ def simulate_lumped_temperature(
         temperature_c=tuple(temperatures),
         current_a=currents,
         ambient_temperature_c=ambient_temperatures,
+        resistance_ohm=tuple(interval_resistance),
         heat_generation_w=tuple(generated_heat),
         heat_rejection_w=tuple(rejected_heat),
         thermal_capacity_j_per_k=spec.thermal_capacity_j_per_k,
@@ -241,6 +269,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "interval_end_s",
         "current_a",
         "ambient_temperature_c",
+        "resistance_ohm",
         "start_temperature_c",
         "end_temperature_c",
         "heat_generation_w",
@@ -258,6 +287,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "interval_end_s": result.time_s[index + 1],
                 "current_a": current_a,
                 "ambient_temperature_c": result.ambient_temperature_c[index],
+                "resistance_ohm": result.resistance_ohm[index],
                 "start_temperature_c": result.temperature_c[index],
                 "end_temperature_c": result.temperature_c[index + 1],
                 "heat_generation_w": generated_w,
@@ -279,6 +309,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--duration-s", type=float)
     parser.add_argument("--time-step-s", type=float)
     parser.add_argument("--resistance-ohm", type=float, default=0.004)
+    parser.add_argument(
+        "--resistance-temperature-coefficient-per-k",
+        type=float,
+        default=0.0,
+    )
+    parser.add_argument(
+        "--resistance-reference-temperature-c",
+        type=float,
+        default=25.0,
+    )
     parser.add_argument("--heat-transfer-w-per-k", type=float, default=1.2)
     parser.add_argument("--ambient-temperature-c", type=float)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
@@ -337,6 +377,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         mass_kg=args.mass_kg,
         specific_heat_j_per_kg_k=args.specific_heat_j_per_kg_k,
         resistance_ohm=args.resistance_ohm,
+        resistance_temperature_coefficient_per_k=(
+            args.resistance_temperature_coefficient_per_k
+        ),
+        resistance_reference_temperature_c=(args.resistance_reference_temperature_c),
         heat_transfer_w_per_k=args.heat_transfer_w_per_k,
         ambient_temperature_c=ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
@@ -351,6 +395,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Duration: {len(currents) * time_step_s:.3f} s")
     print(f"Final temperature: {result.temperature_c[-1]:.3f} degC")
     print(f"Peak temperature: {result.peak_temperature_c:.3f} degC")
+    print(
+        "Resistance range: "
+        f"{min(result.resistance_ohm):.6f} to "
+        f"{max(result.resistance_ohm):.6f} ohm"
+    )
     print(f"Stored thermal energy: {result.stored_energy_change_j:.3f} J")
     print(f"Integrated net heat: {result.integrated_net_heat_j:.3f} J")
     print(f"Energy-balance error: {result.energy_balance_error_j:.6e} J")
