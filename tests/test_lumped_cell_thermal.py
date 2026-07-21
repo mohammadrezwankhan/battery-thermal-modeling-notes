@@ -797,6 +797,30 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.ambient_temperature_c, (35.0, 35.0))
         self.assertEqual(profile.heat_transfer_w_per_k, (0.6, 4.0))
 
+    def test_loads_csv_with_bom_and_spaced_headers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "\ufefftime_s, current_a , duration_s \n"
+                "0,0,60\n"
+                "60,10,60\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.time_s, (0.0, 60.0))
+        self.assertEqual(profile.current_a, (0.0, 10.0))
+        self.assertEqual(profile.interval_duration_s, (60.0, 60.0))
+
+    def test_rejects_empty_csv_headers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text("time_s,,current_a\n0,0,1\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError,
+                "header must contain non-empty",
+            ):
+                load_current_profile(path)
+
     def test_loads_profile_with_signed_external_heat(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "profile.csv"
