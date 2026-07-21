@@ -131,6 +131,10 @@ python models/lumped_cell_thermal.py `
   --emissivity 0.85 --radiating-area-m2 0.03 `
   --integration-method rk4 --rk4-max-step-s 0.5 `
   --output-csv results/radiative_cooling_intervals.csv
+python models/lumped_cell_thermal.py `
+  --current-a 75 --duration-s 600 `
+  --temperature-limit-c 30 --temperature-limit-c 35 `
+  --limit-report-csv results/temperature-limits.csv
 python -m unittest discover -s tests -v
 ```
 
@@ -140,7 +144,8 @@ supports traceable charge/discharge duty cycles, optional interval ambient
 and radiative-surroundings temperatures, entropic coefficients, and
 external heat sources and heat-transfer coefficients, explicit nonuniform
 interval durations, optional diffuse-gray radiation, and interval-level CSV
-results.
+results. Repeatable temperature limits add first-crossing, exposure-duration,
+and peak-margin summaries without changing the thermal integration.
 
 ## Contribution Entry Points
 
