@@ -15,7 +15,7 @@ Q_reversible = -I T_kelvin dU_oc/dT
 Q_generation = Q_irreversible + Q_reversible
 R(T) = R_ref [1 + alpha (T_cell - T_ref)]
 Q_convection = h(t) (T_cell - T_ambient)
-Q_radiation = epsilon sigma A (T_cell_kelvin^4 - T_ambient_kelvin^4)
+Q_radiation = epsilon sigma A (T_cell_kelvin^4 - T_surroundings_kelvin^4)
 Q_rejection = Q_convection + Q_radiation
 C_thermal dT/dt = Q_generation - Q_rejection
 C_thermal = mass * specific_heat
@@ -84,7 +84,10 @@ surface radiation. The implementation uses the exact NIST CODATA
 Stefan-Boltzmann constant, `5.670374419e-8 W/(m^2 K^4)`, from the
 [2022 CODATA recommended values](https://physics.nist.gov/cuu/pdf/JPCRD2022CODATA.pdf).
 The supplied ambient temperature is also the effective radiative-surroundings
-temperature for each interval.
+temperature for each interval unless a separate boundary is supplied. Use
+`--radiative-surroundings-temperature-c` for a constant enclosure temperature,
+or add `radiative_surroundings_temperature_c` to a profile for an independent
+piecewise-constant schedule.
 
 Radiation makes the temperature balance nonlinear, so it requires the
 fourth-order Runge-Kutta method. `--rk4-max-step-s` bounds the internal solver
@@ -98,26 +101,30 @@ python models/lumped_cell_thermal.py `
   --output-csv results/radiative_cooling_intervals.csv
 ```
 
-The committed illustrative case reports a final temperature of `34.184 degC`,
-a peak of `54.479 degC`, and start-of-interval radiative heat rejection from
-`-1.612 W` to `4.448 W`. Negative rejection means the cooler cell receives net
-radiative heat from warmer surroundings. The result and CSV keep convection,
-radiation, and total heat rejection separate; integrated net heat remains the
-thermal-capacity change over each RK4 interval.
+The committed illustrative case separates a `25` to `35 degC` convection
+boundary from a `10` to `50 degC` radiative-surroundings schedule. It reports a
+final temperature of `33.323 degC`, a peak of `55.433 degC`, and
+start-of-interval radiative heat rejection from `-4.342 W` to `6.200 W`.
+Negative rejection means the cooler cell receives net radiative heat from
+warmer surroundings. The result and CSV keep both boundary temperatures,
+convection, radiation, and total heat rejection separate; integrated net heat
+remains the thermal-capacity change over each RK4 interval.
 
 The default emissivity and area are both zero, preserving every existing
 linear case. The two parameters must either both be zero or both be positive,
 emissivity is constrained to `[0, 1]`, and area must be nonnegative. The
 `exact-linear` method rejects enabled radiation rather than silently dropping
 the nonlinear term. This is a screening boundary: surface emissivity and area
-are constant, ambient stands in for radiative surroundings, and view factors,
-reflections, enclosure exchange, and wavelength dependence are excluded.
+are constant, each interval has one effective radiative-surroundings
+temperature, and view factors, reflections, enclosure exchange, and wavelength
+dependence are excluded.
 
 ## Run A Current And Ambient Profile
 
 The CLI accepts a strict CSV containing interval-start timestamps and current
 commands, with optional interval duration, ambient temperature, entropic
-coefficient, and heat-transfer coefficient columns.
+coefficient, radiative-surroundings temperature, and heat-transfer coefficient
+columns.
 Without a `duration_s` column, timestamps must start at zero and use one
 uniform step; positive and negative currents both produce irreversible `I^2 R`
 heat.
@@ -138,10 +145,10 @@ python models/lumped_cell_thermal.py `
 ```
 
 The output records interval boundaries and duration, current, start/end
-temperature, ambient temperature, heat-transfer coefficient, radiation
-parameters, evaluated resistance, entropic coefficient, irreversible,
-reversible, total generated, convective, radiative, and total rejected heat
-rates, and net interval heat.
+temperature, ambient and radiative-surroundings temperatures, heat-transfer
+coefficient, radiation parameters, evaluated resistance, entropic coefficient,
+irreversible, reversible, total generated, convective, radiative, and total
+rejected heat rates, and net interval heat.
 Profile mode derives the time step from the CSV and rejects `--current-a`,
 `--duration-s`, or `--time-step-s` overrides.
 
@@ -157,6 +164,11 @@ python models/lumped_cell_thermal.py `
 A profile without an ambient column uses `--ambient-temperature-c` or its
 25 degC default. A profile containing `ambient_temperature_c` cannot be
 combined with that option because the interval values are authoritative.
+Likewise, a profile without a radiative-surroundings column uses
+`--radiative-surroundings-temperature-c`; when neither source is supplied,
+radiation follows ambient for backward compatibility. A profile containing
+`radiative_surroundings_temperature_c` cannot be combined with the constant
+option. All supplied temperatures must be finite and above absolute zero.
 
 For measurements or dispatch commands with irregular operating windows, add a
 positive `duration_s` value to every row. Each `time_s` must equal the previous
