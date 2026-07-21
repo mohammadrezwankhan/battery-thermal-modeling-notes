@@ -337,8 +337,9 @@ python models/lumped_cell_thermal.py `
   --limit-report-csv results/temperature-limits.csv
 ```
 
-Each assessment reports whether the limit was exceeded, the first crossing
-time, total time above the limit, exposure fraction, peak temperature, and
+Each assessment reports whether the limit was exceeded, the first-crossing
+time, final recovery time when the trace ends at or below the limit, total
+time above the limit, exposure fraction, peak temperature, and
 signed margin from the peak to the limit. A negative margin means the simulated
 peak exceeded the limit. The limit itself is not counted as an exceedance.
 

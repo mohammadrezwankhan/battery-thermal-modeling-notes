@@ -191,6 +191,7 @@ class TemperatureLimitAssessment:
     limit_temperature_c: float
     exceeded: bool
     first_exceedance_time_s: float | None
+    final_recovery_time_s: float | None
     time_above_limit_s: float
     exposure_fraction: float
     peak_temperature_c: float
@@ -254,6 +255,7 @@ class ThermalSimulation:
 
         _temperature_k(limit_temperature_c, "limit_temperature_c")
         first_exceedance_time_s: float | None = None
+        last_recovery_time_s: float | None = None
         time_above_limit_s = 0.0
         if self.temperature_c[0] > limit_temperature_c:
             first_exceedance_time_s = self.time_s[0]
@@ -284,14 +286,22 @@ class ThermalSimulation:
                     first_exceedance_time_s = crossing_time_s
             else:
                 time_above_limit_s += crossing_time_s - start_time_s
+                last_recovery_time_s = crossing_time_s
                 if first_exceedance_time_s is None:
                     first_exceedance_time_s = start_time_s
 
         peak_temperature_c = self.peak_temperature_c
+        final_recovery_time_s = (
+            last_recovery_time_s
+            if first_exceedance_time_s is not None
+            and self.temperature_c[-1] <= limit_temperature_c
+            else None
+        )
         return TemperatureLimitAssessment(
             limit_temperature_c=limit_temperature_c,
             exceeded=first_exceedance_time_s is not None,
             first_exceedance_time_s=first_exceedance_time_s,
+            final_recovery_time_s=final_recovery_time_s,
             time_above_limit_s=time_above_limit_s,
             exposure_fraction=time_above_limit_s / self.duration_s,
             peak_temperature_c=peak_temperature_c,
@@ -965,6 +975,7 @@ def write_temperature_limit_csv(
         "limit_temperature_c",
         "exceeded",
         "first_exceedance_time_s",
+        "final_recovery_time_s",
         "time_above_limit_s",
         "exposure_fraction",
         "peak_temperature_c",
@@ -984,6 +995,11 @@ def write_temperature_limit_csv(
                         ""
                         if assessment.first_exceedance_time_s is None
                         else format(assessment.first_exceedance_time_s, ".12g")
+                    ),
+                    "final_recovery_time_s": (
+                        ""
+                        if assessment.final_recovery_time_s is None
+                        else format(assessment.final_recovery_time_s, ".12g")
                     ),
                     "time_above_limit_s": format(
                         assessment.time_above_limit_s, ".12g"
@@ -1263,6 +1279,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{status}"
         )
         print(f"  First exceedance: {first_exceedance}")
+        final_recovery = (
+            "not recovered"
+            if assessment.final_recovery_time_s is None
+            else f"{assessment.final_recovery_time_s:.6g} s"
+        )
+        print(f"  Final recovery: {final_recovery}")
         print(
             "  Exposure: "
             f"{assessment.time_above_limit_s:.6g} s "
