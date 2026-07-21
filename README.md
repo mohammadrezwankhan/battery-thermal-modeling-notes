@@ -94,8 +94,9 @@ LICENSE
 
 The dependency-free lumped model implements irreversible `I^2 R` heating,
 optional reversible entropic heat, linear resistance-temperature feedback,
-piecewise-constant heat-transfer boundaries, explicit Euler or exact linear
-interval integration, and an energy-balance diagnostic:
+piecewise-constant convection, optional nonlinear surface radiation, explicit
+Euler, exact linear, or bounded-step RK4 integration, and an energy-balance
+diagnostic:
 
 ```powershell
 python models/lumped_cell_thermal.py --current-a 75 --duration-s 600
@@ -120,6 +121,11 @@ python models/lumped_cell_thermal.py `
   --profile-csv models/data/variable_cooling_profile.csv `
   --integration-method exact-linear `
   --output-csv results/variable_cooling_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/radiative_cooling_profile.csv `
+  --emissivity 0.85 --radiating-area-m2 0.03 `
+  --integration-method rk4 --rk4-max-step-s 0.5 `
+  --output-csv results/radiative_cooling_intervals.csv
 python -m unittest discover -s tests -v
 ```
 
@@ -127,7 +133,8 @@ See the [model assumptions and limitations](models/README.md) before adapting
 the parameters or using the output in an engineering review. The profile path
 supports traceable charge/discharge duty cycles, optional interval ambient
 temperature, entropic coefficients, and heat-transfer coefficients, explicit
-nonuniform interval durations, and interval-level CSV results.
+nonuniform interval durations, optional diffuse-gray radiation, and
+interval-level CSV results.
 
 ## Contribution Entry Points
 

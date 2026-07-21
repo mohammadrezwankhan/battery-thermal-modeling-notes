@@ -10,11 +10,13 @@ from typing import Sequence
 
 
 ABSOLUTE_ZERO_C = -273.15
+STEFAN_BOLTZMANN_W_PER_M2_K4 = 5.670374419e-8
 
 
 class IntegrationMethod(str, Enum):
     EXPLICIT_EULER = "explicit-euler"
     EXACT_LINEAR = "exact-linear"
+    RK4 = "rk4"
 
 
 @dataclass(frozen=True)
@@ -28,17 +30,26 @@ class LumpedThermalSpec:
     resistance_reference_temperature_c: float = 25.0
     entropic_coefficient_v_per_k: float = 0.0
     heat_transfer_w_per_k: float = 1.2
+    emissivity: float = 0.0
+    radiating_area_m2: float = 0.0
     ambient_temperature_c: float = 25.0
     initial_temperature_c: float = 25.0
     time_step_s: float = 1.0
+    rk4_max_step_s: float = 1.0
     integration_method: IntegrationMethod | str = IntegrationMethod.EXPLICIT_EULER
 
     @property
     def thermal_capacity_j_per_k(self) -> float:
         return self.mass_kg * self.specific_heat_j_per_kg_k
 
+    @property
+    def radiation_coefficient_w_per_k4(self) -> float:
+        """Return epsilon * sigma * area for diffuse-gray surface radiation."""
+
+        return self.emissivity * STEFAN_BOLTZMANN_W_PER_M2_K4 * self.radiating_area_m2
+
     def validate(self) -> None:
-        self.resolved_integration_method()
+        integration_method = self.resolved_integration_method()
         finite_values = {
             "mass_kg": self.mass_kg,
             "specific_heat_j_per_kg_k": self.specific_heat_j_per_kg_k,
@@ -51,9 +62,12 @@ class LumpedThermalSpec:
             ),
             "entropic_coefficient_v_per_k": self.entropic_coefficient_v_per_k,
             "heat_transfer_w_per_k": self.heat_transfer_w_per_k,
+            "emissivity": self.emissivity,
+            "radiating_area_m2": self.radiating_area_m2,
             "ambient_temperature_c": self.ambient_temperature_c,
             "initial_temperature_c": self.initial_temperature_c,
             "time_step_s": self.time_step_s,
+            "rk4_max_step_s": self.rk4_max_step_s,
         }
         for name, value in finite_values.items():
             if not math.isfinite(value):
@@ -67,8 +81,18 @@ class LumpedThermalSpec:
             raise ValueError("resistance_ohm must be nonnegative")
         if self.heat_transfer_w_per_k < 0.0:
             raise ValueError("heat_transfer_w_per_k must be nonnegative")
+        if not 0.0 <= self.emissivity <= 1.0:
+            raise ValueError("emissivity must be between zero and one")
+        if self.radiating_area_m2 < 0.0:
+            raise ValueError("radiating_area_m2 must be nonnegative")
+        if (self.emissivity == 0.0) != (self.radiating_area_m2 == 0.0):
+            raise ValueError(
+                "emissivity and radiating_area_m2 must both be zero or both positive"
+            )
         if self.time_step_s <= 0.0:
             raise ValueError("time_step_s must be positive")
+        if self.rk4_max_step_s <= 0.0:
+            raise ValueError("rk4_max_step_s must be positive")
         _temperature_k(self.ambient_temperature_c, "ambient_temperature_c")
         _temperature_k(self.initial_temperature_c, "initial_temperature_c")
         _temperature_k(
@@ -76,6 +100,14 @@ class LumpedThermalSpec:
             "resistance_reference_temperature_c",
         )
         self.resistance_at_temperature(self.initial_temperature_c)
+        if self.radiation_coefficient_w_per_k4 > 0.0:
+            if integration_method is IntegrationMethod.EXACT_LINEAR:
+                raise ValueError(
+                    "exact-linear integration does not support nonlinear radiation; "
+                    "use rk4"
+                )
+            if integration_method is not IntegrationMethod.RK4:
+                raise ValueError("nonlinear radiation requires rk4 integration")
 
     def resolved_integration_method(self) -> IntegrationMethod:
         """Return the configured integration method as a validated enum."""
@@ -119,6 +151,30 @@ class LumpedThermalSpec:
         temperature_k = _temperature_k(temperature_c, "temperature_c")
         return -current_a * temperature_k * coefficient
 
+    def radiative_heat_rejection_w(
+        self,
+        temperature_c: float,
+        surroundings_temperature_c: float,
+    ) -> float:
+        """Return net diffuse-gray radiation from the cell to its surroundings."""
+
+        temperature_k = _temperature_k(temperature_c, "temperature_c")
+        surroundings_k = _temperature_k(
+            surroundings_temperature_c,
+            "surroundings_temperature_c",
+        )
+        if self.radiation_coefficient_w_per_k4 == 0.0:
+            return 0.0
+        try:
+            heat_w = self.radiation_coefficient_w_per_k4 * (
+                temperature_k**4 - surroundings_k**4
+            )
+        except OverflowError as error:
+            raise ValueError("radiative heat calculation overflowed") from error
+        if not math.isfinite(heat_w):
+            raise ValueError("radiative heat calculation must remain finite")
+        return heat_w
+
 
 @dataclass(frozen=True)
 class ThermalSimulation:
@@ -134,10 +190,15 @@ class ThermalSimulation:
     irreversible_heat_w: tuple[float, ...]
     reversible_heat_w: tuple[float, ...]
     heat_generation_w: tuple[float, ...]
+    convective_heat_rejection_w: tuple[float, ...]
+    radiative_heat_rejection_w: tuple[float, ...]
     heat_rejection_w: tuple[float, ...]
     interval_net_heat_j: tuple[float, ...]
     interval_duration_s: tuple[float, ...]
     thermal_capacity_j_per_k: float
+    emissivity: float
+    radiating_area_m2: float
+    rk4_max_step_s: float
     integration_method: IntegrationMethod
 
     @property
@@ -209,12 +270,101 @@ class CurrentProfile:
         return None
 
 
+@dataclass(frozen=True)
+class HeatRates:
+    """Start-of-step heat rates for one thermal state and boundary condition."""
+
+    resistance_ohm: float
+    irreversible_w: float
+    reversible_w: float
+    generation_w: float
+    convective_rejection_w: float
+    radiative_rejection_w: float
+    total_rejection_w: float
+    net_w: float
+
+
 def _temperature_k(temperature_c: float, context: str) -> float:
     if not math.isfinite(temperature_c):
         raise ValueError(f"{context} must be finite")
     if temperature_c <= ABSOLUTE_ZERO_C:
         raise ValueError(f"{context} must be above absolute zero")
     return temperature_c - ABSOLUTE_ZERO_C
+
+
+def _heat_rates(
+    spec: LumpedThermalSpec,
+    temperature_c: float,
+    current_a: float,
+    ambient_temperature_c: float,
+    entropic_coefficient_v_per_k: float,
+    heat_transfer_w_per_k: float,
+) -> HeatRates:
+    resistance_ohm = spec.resistance_at_temperature(temperature_c)
+    irreversible_w = current_a * current_a * resistance_ohm
+    reversible_w = spec.reversible_heat_w(
+        current_a,
+        temperature_c,
+        entropic_coefficient_v_per_k,
+    )
+    generation_w = irreversible_w + reversible_w
+    convective_rejection_w = heat_transfer_w_per_k * (
+        temperature_c - ambient_temperature_c
+    )
+    radiative_rejection_w = spec.radiative_heat_rejection_w(
+        temperature_c,
+        ambient_temperature_c,
+    )
+    total_rejection_w = convective_rejection_w + radiative_rejection_w
+    return HeatRates(
+        resistance_ohm=resistance_ohm,
+        irreversible_w=irreversible_w,
+        reversible_w=reversible_w,
+        generation_w=generation_w,
+        convective_rejection_w=convective_rejection_w,
+        radiative_rejection_w=radiative_rejection_w,
+        total_rejection_w=total_rejection_w,
+        net_w=generation_w - total_rejection_w,
+    )
+
+
+def _rk4_temperature_change_c(
+    spec: LumpedThermalSpec,
+    start_temperature_c: float,
+    current_a: float,
+    ambient_temperature_c: float,
+    entropic_coefficient_v_per_k: float,
+    heat_transfer_w_per_k: float,
+    interval_duration_s: float,
+) -> float:
+    """Integrate one constant-boundary interval with bounded RK4 substeps."""
+
+    substeps = max(1, math.ceil(interval_duration_s / spec.rk4_max_step_s))
+    step_s = interval_duration_s / substeps
+    temperature_c = start_temperature_c
+
+    def derivative(value_c: float) -> float:
+        rates = _heat_rates(
+            spec,
+            value_c,
+            current_a,
+            ambient_temperature_c,
+            entropic_coefficient_v_per_k,
+            heat_transfer_w_per_k,
+        )
+        return rates.net_w / spec.thermal_capacity_j_per_k
+
+    for _ in range(substeps):
+        k1 = derivative(temperature_c)
+        k2 = derivative(temperature_c + 0.5 * step_s * k1)
+        k3 = derivative(temperature_c + 0.5 * step_s * k2)
+        k4 = derivative(temperature_c + step_s * k3)
+        temperature_c += step_s * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
+        if not math.isfinite(temperature_c):
+            raise ValueError("rk4 integration produced a non-finite temperature")
+        _temperature_k(temperature_c, "rk4 integrated temperature")
+
+    return temperature_c - start_temperature_c
 
 
 def load_current_profile(path: Path) -> CurrentProfile:
@@ -441,6 +591,8 @@ def simulate_lumped_temperature(
     irreversible_heat: list[float] = []
     reversible_heat: list[float] = []
     generated_heat: list[float] = []
+    convective_rejected_heat: list[float] = []
+    radiative_rejected_heat: list[float] = []
     rejected_heat: list[float] = []
     interval_net_heat: list[float] = []
     interval_resistance: list[float] = []
@@ -461,21 +613,19 @@ def simulate_lumped_temperature(
         strict=True,
     ):
         temperature = temperatures[-1]
-        resistance_ohm = spec.resistance_at_temperature(temperature)
-        irreversible_w = current * current * resistance_ohm
-        reversible_w = spec.reversible_heat_w(
-            current,
+        rates = _heat_rates(
+            spec,
             temperature,
+            current,
+            ambient_temperature_c,
             entropic_coefficient_v_per_k,
+            heat_transfer_w_per_k,
         )
-        generation_w = irreversible_w + reversible_w
-        rejection_w = heat_transfer_w_per_k * (temperature - ambient_temperature_c)
-        net_heat_w = generation_w - rejection_w
         if integration_method is IntegrationMethod.EXPLICIT_EULER:
             temperature_change_c = (
-                net_heat_w * interval_duration_s / spec.thermal_capacity_j_per_k
+                rates.net_w * interval_duration_s / spec.thermal_capacity_j_per_k
             )
-        else:
+        elif integration_method is IntegrationMethod.EXACT_LINEAR:
             thermal_feedback_w_per_k = (
                 current
                 * current
@@ -486,7 +636,7 @@ def simulate_lumped_temperature(
             )
             if thermal_feedback_w_per_k == 0.0:
                 temperature_change_c = (
-                    net_heat_w * interval_duration_s / spec.thermal_capacity_j_per_k
+                    rates.net_w * interval_duration_s / spec.thermal_capacity_j_per_k
                 )
             else:
                 exponent = (
@@ -496,12 +646,22 @@ def simulate_lumped_temperature(
                 )
                 try:
                     temperature_change_c = (
-                        net_heat_w * math.expm1(exponent) / thermal_feedback_w_per_k
+                        rates.net_w * math.expm1(exponent) / thermal_feedback_w_per_k
                     )
                 except OverflowError as error:
                     raise ValueError(
                         "exact integration produced a non-finite temperature"
                     ) from error
+        else:
+            temperature_change_c = _rk4_temperature_change_c(
+                spec,
+                temperature,
+                current,
+                ambient_temperature_c,
+                entropic_coefficient_v_per_k,
+                heat_transfer_w_per_k,
+                interval_duration_s,
+            )
 
         next_temperature_c = temperature + temperature_change_c
         if not math.isfinite(next_temperature_c):
@@ -509,12 +669,14 @@ def simulate_lumped_temperature(
         _temperature_k(next_temperature_c, "integrated temperature")
         spec.resistance_at_temperature(next_temperature_c)
 
-        interval_resistance.append(resistance_ohm)
+        interval_resistance.append(rates.resistance_ohm)
         interval_entropic_coefficient.append(entropic_coefficient_v_per_k)
-        irreversible_heat.append(irreversible_w)
-        reversible_heat.append(reversible_w)
-        generated_heat.append(generation_w)
-        rejected_heat.append(rejection_w)
+        irreversible_heat.append(rates.irreversible_w)
+        reversible_heat.append(rates.reversible_w)
+        generated_heat.append(rates.generation_w)
+        convective_rejected_heat.append(rates.convective_rejection_w)
+        radiative_rejected_heat.append(rates.radiative_rejection_w)
+        rejected_heat.append(rates.total_rejection_w)
         interval_net_heat.append(temperature_change_c * spec.thermal_capacity_j_per_k)
         temperatures.append(next_temperature_c)
 
@@ -532,10 +694,15 @@ def simulate_lumped_temperature(
         irreversible_heat_w=tuple(irreversible_heat),
         reversible_heat_w=tuple(reversible_heat),
         heat_generation_w=tuple(generated_heat),
+        convective_heat_rejection_w=tuple(convective_rejected_heat),
+        radiative_heat_rejection_w=tuple(radiative_rejected_heat),
         heat_rejection_w=tuple(rejected_heat),
         interval_net_heat_j=tuple(interval_net_heat),
         interval_duration_s=interval_durations,
         thermal_capacity_j_per_k=spec.thermal_capacity_j_per_k,
+        emissivity=spec.emissivity,
+        radiating_area_m2=spec.radiating_area_m2,
+        rk4_max_step_s=spec.rk4_max_step_s,
         integration_method=integration_method,
     )
 
@@ -551,6 +718,8 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "current_a",
         "ambient_temperature_c",
         "heat_transfer_w_per_k",
+        "emissivity",
+        "radiating_area_m2",
         "resistance_ohm",
         "entropic_coefficient_v_per_k",
         "start_temperature_c",
@@ -558,6 +727,8 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "irreversible_heat_w",
         "reversible_heat_w",
         "heat_generation_w",
+        "convective_heat_rejection_w",
+        "radiative_heat_rejection_w",
         "heat_rejection_w",
         "net_heat_j",
     ]
@@ -574,6 +745,8 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "current_a": current_a,
                 "ambient_temperature_c": result.ambient_temperature_c[index],
                 "heat_transfer_w_per_k": result.heat_transfer_w_per_k[index],
+                "emissivity": result.emissivity,
+                "radiating_area_m2": result.radiating_area_m2,
                 "resistance_ohm": result.resistance_ohm[index],
                 "entropic_coefficient_v_per_k": (
                     result.entropic_coefficient_v_per_k[index]
@@ -583,6 +756,12 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "irreversible_heat_w": result.irreversible_heat_w[index],
                 "reversible_heat_w": result.reversible_heat_w[index],
                 "heat_generation_w": generated_w,
+                "convective_heat_rejection_w": (
+                    result.convective_heat_rejection_w[index]
+                ),
+                "radiative_heat_rejection_w": (
+                    result.radiative_heat_rejection_w[index]
+                ),
                 "heat_rejection_w": rejected_w,
                 "net_heat_j": result.interval_net_heat_j[index],
             }
@@ -613,10 +792,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--entropic-coefficient-v-per-k", type=float)
     parser.add_argument("--heat-transfer-w-per-k", type=float)
+    parser.add_argument("--emissivity", type=float, default=0.0)
+    parser.add_argument("--radiating-area-m2", type=float, default=0.0)
     parser.add_argument("--ambient-temperature-c", type=float)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
     parser.add_argument("--specific-heat-j-per-kg-k", type=float, default=1000.0)
+    parser.add_argument("--rk4-max-step-s", type=float, default=1.0)
     parser.add_argument(
         "--integration-method",
         choices=tuple(method.value for method in IntegrationMethod),
@@ -709,9 +891,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         heat_transfer_w_per_k=(
             1.2 if args.heat_transfer_w_per_k is None else args.heat_transfer_w_per_k
         ),
+        emissivity=args.emissivity,
+        radiating_area_m2=args.radiating_area_m2,
         ambient_temperature_c=ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
         time_step_s=time_step_s,
+        rk4_max_step_s=args.rk4_max_step_s,
         integration_method=args.integration_method,
     )
     result = simulate_lumped_temperature(
@@ -741,6 +926,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{min(result.heat_transfer_w_per_k):.6g} to "
         f"{max(result.heat_transfer_w_per_k):.6g} W/K"
     )
+    print(f"Radiation coefficient: {spec.radiation_coefficient_w_per_k4:.12g} W/K^4")
     print(
         "Entropic coefficient range: "
         f"{min(result.entropic_coefficient_v_per_k):.6g} to "
@@ -756,6 +942,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{min(result.heat_generation_w):.6f} to "
         f"{max(result.heat_generation_w):.6f} W"
     )
+    print(
+        "Convective heat-rejection range: "
+        f"{min(result.convective_heat_rejection_w):.6f} to "
+        f"{max(result.convective_heat_rejection_w):.6f} W"
+    )
+    print(
+        "Radiative heat-rejection range: "
+        f"{min(result.radiative_heat_rejection_w):.6f} to "
+        f"{max(result.radiative_heat_rejection_w):.6f} W"
+    )
+    if result.integration_method is IntegrationMethod.RK4:
+        print(f"RK4 maximum internal step: {result.rk4_max_step_s:.6g} s")
     print(f"Stored thermal energy: {result.stored_energy_change_j:.3f} J")
     print(f"Integrated net heat: {result.integrated_net_heat_j:.3f} J")
     print(f"Energy-balance error: {result.energy_balance_error_j:.6e} J")
