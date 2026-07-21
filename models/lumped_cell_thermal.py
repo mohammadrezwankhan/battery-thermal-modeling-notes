@@ -532,6 +532,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
 
     with path.open("r", encoding="utf-8", newline="") as profile_file:
         reader = csv.DictReader(profile_file)
+        raw_fieldnames = reader.fieldnames or []
         required_headers = ["time_s", "current_a"]
         optional_headers = [
             "duration_s",
@@ -541,7 +542,10 @@ def load_current_profile(path: Path) -> CurrentProfile:
             "external_heat_w",
             "heat_transfer_w_per_k",
         ]
-        fieldnames = reader.fieldnames or []
+        fieldnames = [fieldname.strip().lstrip("\ufeff") for fieldname in raw_fieldnames]
+        if any(fieldname == "" for fieldname in fieldnames):
+            raise ValueError("profile CSV header must contain non-empty column names")
+        reader.fieldnames = fieldnames
         selected_optional_headers = [
             header for header in optional_headers if header in fieldnames[2:]
         ]
