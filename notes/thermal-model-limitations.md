@@ -8,7 +8,7 @@ Early-stage battery thermal models are useful for learning, screening, and revie
 | Contact resistance omitted | Cell-to-module, module-to-plate, or interface gaps can create gradients that the model does not predict. | Add contact assumptions or sensitivity cases when gradients matter. |
 | Aging not represented | Resistance, capacity, and heat generation may shift as the cell ages. | State age/SOH assumptions and avoid using fresh-cell values for lifetime claims. |
 | Ambient assumption too narrow | A single ambient value can hide hot-day, cold-start, enclosure, or ventilation limits. | Run ambient sensitivity cases or define the approved operating range. |
-| Cooling boundary simplified | Fixed convection or ideal cooling can overstate thermal performance. | Document airflow, coolant, inlet temperature, flow rate, and heat-transfer coefficient sources. |
+| Cooling boundary simplified | Fixed or prescribed convection can overstate thermal performance and miss actuator or fluid transients. | Document airflow, coolant, inlet temperature, flow rate, and heat-transfer coefficient sources; run bounded coefficient schedules when staged cooling matters. |
 | Module/pack scaling simplified | Cell-level heat results may not capture interconnects, busbars, spacing, or enclosure behavior. | State scaling assumptions and add module or pack evidence before design review. |
 | Validation gap | A visually plausible plot may not match measured pulse, calorimetry, or datasheet behavior. | Include validation reference, confidence level, and known mismatch. |
 | Solver/time-step sensitivity | Coarse time steps can hide transient peaks or numerical instability. | Report solver, time step, and convergence or sensitivity checks. |

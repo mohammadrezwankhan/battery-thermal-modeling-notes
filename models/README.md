@@ -14,15 +14,16 @@ Q_irreversible = I^2 R
 Q_reversible = -I T_kelvin dU_oc/dT
 Q_generation = Q_irreversible + Q_reversible
 R(T) = R_ref [1 + alpha (T_cell - T_ref)]
-Q_rejection = h (T_cell - T_ambient)
+Q_rejection = h(t) (T_cell - T_ambient)
 C_thermal dT/dt = Q_generation - Q_rejection
 C_thermal = mass * specific_heat
 ```
 
 The default method advances temperature with an explicit Euler step. The
-optional exact linear method solves each piecewise-constant interval
-analytically. The returned result includes stored thermal energy, integrated
-net heat, and their absolute difference so discretization and implementation
+optional exact linear method solves each interval analytically when current,
+ambient, entropic coefficient, and heat-transfer coefficient are piecewise
+constant. The returned result includes stored thermal energy, integrated net
+heat, and their absolute difference so discretization and implementation
 changes can be audited.
 
 ## Run The Reference Case
@@ -60,7 +61,8 @@ python models/lumped_cell_thermal.py `
 
 With constant current, ambient, and entropic coefficient over an interval,
 linear heat rejection, reversible heat, and the configured linear
-resistance-temperature relation produce a linear ODE.
+resistance-temperature relation produce a linear ODE. An interval-specific
+heat-transfer coefficient is included in that interval's exact feedback slope.
 The exact method evaluates its exponential solution with `expm1` for numerical
 stability. It also stores the exact net interval heat as thermal capacity times
 the temperature change. CSV heat rates, `resistance_ohm`, and
@@ -75,7 +77,8 @@ comparisons or backward-compatible result reproduction.
 ## Run A Current And Ambient Profile
 
 The CLI accepts a strict CSV containing interval-start timestamps and current
-commands, with optional interval duration and ambient-temperature columns.
+commands, with optional interval duration, ambient temperature, entropic
+coefficient, and heat-transfer coefficient columns.
 Without a `duration_s` column, timestamps must start at zero and use one
 uniform step; positive and negative currents both produce irreversible `I^2 R`
 heat.
@@ -96,9 +99,9 @@ python models/lumped_cell_thermal.py `
 ```
 
 The output records interval boundaries and duration, current, start/end
-temperature, ambient temperature, evaluated resistance, entropic coefficient,
-irreversible, reversible, total generated and rejected heat rates, and net
-interval heat.
+temperature, ambient temperature, heat-transfer coefficient, evaluated
+resistance, entropic coefficient, irreversible, reversible, total generated
+and rejected heat rates, and net interval heat.
 Profile mode derives the time step from the CSV and rejects `--current-a`,
 `--duration-s`, or `--time-step-s` overrides.
 
@@ -140,6 +143,41 @@ The Python API accepts the same schedule through `interval_durations_s`. The
 simulation exposes every interval duration, cumulative time boundaries, and
 the total elapsed duration. Its `time_step_s` compatibility property returns
 the common duration for a uniform grid and `None` for a variable grid.
+
+## Variable Cooling Boundary
+
+Add `heat_transfer_w_per_k` to a profile to represent a supplied sequence of
+effective cooling conditions such as staged airflow, coolant-flow operating
+points, or conservative sensitivity cases:
+
+```csv
+time_s,current_a,duration_s,ambient_temperature_c,heat_transfer_w_per_k
+0,100,300,35,0.6
+300,100,300,35,1.2
+600,100,300,35,4.0
+900,50,300,30,6.0
+1200,0,600,25,6.0
+```
+
+Run the committed staged-cooling example with exact integration:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/variable_cooling_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/variable_cooling_intervals.csv
+```
+
+The Python API accepts the same values through `heat_transfers_w_per_k`. Values
+must be finite and nonnegative. A profile column takes precedence over the
+constant boundary, so combining it with `--heat-transfer-w-per-k` is rejected
+instead of silently choosing one source. Every interval result and exported row
+preserves the applied value.
+
+This input is an effective conductance boundary, not a fan, pump, coolant-loop,
+or feedback-controller model. Step changes occur only at supplied interval
+boundaries; derive values from measurements, correlations, or a separately
+validated cooling model before drawing design conclusions.
 
 ## Reversible Entropic Heat
 
@@ -211,14 +249,16 @@ window before engineering use.
   coefficient; the model does not derive its SOC or chemistry dependence.
 - Mixing, phase-change, side-reaction, and interconnect heat are excluded.
 - The cell is represented by one uniform temperature state.
-- Heat transfer is linear; ambient may vary by interval, but the heat-transfer
-  coefficient remains fixed.
+- Heat transfer is linear; ambient and the effective heat-transfer coefficient
+  may vary by interval, but fluid dynamics, coolant thermal mass, actuator
+  dynamics, and feedback control are not represented.
 - Electrical SOC and voltage dynamics are outside this reference model.
 - Parameters are educational placeholders and require sourced replacement for
   engineering decisions.
 - Current-profile timestamps are treated as interval starts with piecewise
-  constant current and ambient temperature over each interval. Explicit
-  durations may vary, but the model does not interpolate within an interval.
+  constant current, ambient temperature, coefficients, and heat transfer over
+  each interval. Explicit durations may vary, but the model does not interpolate
+  within an interval.
 - Exact integration applies only to the model's linear within-interval
   equation; nonlinear resistance maps or radiation would require a different
   solver.
