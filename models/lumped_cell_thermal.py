@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import csv
 import math
 from dataclasses import dataclass
@@ -531,7 +532,14 @@ def load_current_profile(path: Path) -> CurrentProfile:
     """Load piecewise-constant electrical and thermal profile intervals."""
 
     with path.open("r", encoding="utf-8", newline="") as profile_file:
-        reader = csv.DictReader(profile_file)
+        cleaned_profile_lines: list[tuple[int, str]] = []
+        for line_number, line in enumerate(profile_file, start=1):
+            if not line.strip():
+                continue
+            if line.lstrip().startswith("#"):
+                continue
+            cleaned_profile_lines.append((line_number, line))
+        reader = csv.DictReader(io.StringIO("".join(line for _, line in cleaned_profile_lines)))
         required_headers = ["time_s", "current_a"]
         optional_headers = [
             "duration_s",
@@ -565,6 +573,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
         has_external_heat = "external_heat_w" in fieldnames
         has_heat_transfer = "heat_transfer_w_per_k" in fieldnames
         rows = list(reader)
+        row_line_numbers = [line_number for line_number, _ in cleaned_profile_lines[1:]]
 
     if not rows:
         raise ValueError("profile CSV must contain at least one interval")
@@ -579,7 +588,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
     entropic_coefficients: list[float] = []
     external_heats: list[float] = []
     heat_transfers: list[float] = []
-    for line_number, row in enumerate(rows, start=2):
+    for line_number, row in zip(row_line_numbers, rows):
         try:
             time_s = float(row["time_s"])
             current_a = float(row["current_a"])
