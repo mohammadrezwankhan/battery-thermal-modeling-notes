@@ -180,3 +180,4 @@ and peak-margin summaries without changing the thermal integration.
 - Add project-specific examples to the data gap triage checklist.
 - Add project-specific examples to the validation readiness review.
 - Add project-specific examples to the research next questions log.
+- Add a sourced temperature-limit sensitivity case study.
