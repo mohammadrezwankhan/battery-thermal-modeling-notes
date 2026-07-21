@@ -17,9 +17,11 @@ C_thermal dT/dt = Q_generation - Q_rejection
 C_thermal = mass * specific_heat
 ```
 
-The temperature state is advanced with an explicit Euler step. The returned
-result includes stored thermal energy, integrated net heat, and their absolute
-difference so discretization and implementation changes can be audited.
+The default method advances temperature with an explicit Euler step. The
+optional exact linear method solves each piecewise-constant interval
+analytically. The returned result includes stored thermal energy, integrated
+net heat, and their absolute difference so discretization and implementation
+changes can be audited.
 
 ## Run The Reference Case
 
@@ -42,6 +44,30 @@ Run the regression checks with:
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Exact Linear Integration
+
+Use `--integration-method exact-linear` when a coarse interval would make an
+explicit Euler approximation unnecessarily sensitive to time-step size:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --current-a 75 --duration-s 600 --time-step-s 600 `
+  --integration-method exact-linear
+```
+
+With constant current and ambient over an interval, linear heat rejection and
+the configured linear resistance-temperature relation produce a linear ODE.
+The exact method evaluates its exponential solution with `expm1` for numerical
+stability. It also stores the exact net interval heat as thermal capacity times
+the temperature change. CSV `heat_generation_w`, `heat_rejection_w`, and
+`resistance_ohm` remain start-of-interval values; `net_heat_j` is the integrated
+interval quantity.
+
+The exact method removes integration error for this model equation, but it does
+not make piecewise-constant current, ambient, parameter, or one-node
+assumptions more accurate. Keep explicit Euler for educational recurrence
+comparisons or backward-compatible result reproduction.
 
 ## Run A Current And Ambient Profile
 
@@ -128,3 +154,6 @@ window before engineering use.
   engineering decisions.
 - Current-profile timestamps are treated as interval starts with piecewise
   constant current and ambient temperature over each interval.
+- Exact integration applies only to the model's linear within-interval
+  equation; nonlinear resistance maps or radiation would require a different
+  solver.
