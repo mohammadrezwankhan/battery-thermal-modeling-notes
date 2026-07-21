@@ -71,9 +71,9 @@ comparisons or backward-compatible result reproduction.
 
 ## Run A Current And Ambient Profile
 
-The CLI accepts a strict two-column CSV containing interval-start timestamps
-and current commands, or a three-column CSV that also supplies ambient
-temperature for each interval. Timestamps must start at zero and use one
+The CLI accepts a strict CSV containing interval-start timestamps and current
+commands, with optional interval duration and ambient-temperature columns.
+Without a `duration_s` column, timestamps must start at zero and use one
 uniform step; positive and negative currents both produce irreversible `I^2 R`
 heat.
 
@@ -92,9 +92,9 @@ python models/lumped_cell_thermal.py `
   --output-csv results/pulse_thermal_intervals.csv
 ```
 
-The output records interval boundaries, current, start/end temperature,
-ambient temperature, evaluated resistance, generated and rejected heat rates,
-and net interval heat.
+The output records interval boundaries and duration, current, start/end
+temperature, ambient temperature, evaluated resistance, generated and rejected
+heat rates, and net interval heat.
 Profile mode derives the time step from the CSV and rejects `--current-a`,
 `--duration-s`, or `--time-step-s` overrides.
 
@@ -107,9 +107,35 @@ python models/lumped_cell_thermal.py `
   --output-csv results/ambient_step_thermal_intervals.csv
 ```
 
-A two-column profile uses `--ambient-temperature-c` or its 25 degC default. A
-three-column profile cannot be combined with that option because the interval
-values are authoritative.
+A profile without an ambient column uses `--ambient-temperature-c` or its
+25 degC default. A profile containing `ambient_temperature_c` cannot be
+combined with that option because the interval values are authoritative.
+
+For measurements or dispatch commands with irregular operating windows, add a
+positive `duration_s` value to every row. Each `time_s` must equal the previous
+interval's end, which rejects gaps and overlaps while making the final
+interval's duration explicit:
+
+```csv
+time_s,current_a,duration_s,ambient_temperature_c
+0,0,30,25
+30,75,90,30
+120,-50,15,35
+```
+
+Run the committed irregular profile with exact within-interval integration:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/irregular_current_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/irregular_thermal_intervals.csv
+```
+
+The Python API accepts the same schedule through `interval_durations_s`. The
+simulation exposes every interval duration, cumulative time boundaries, and
+the total elapsed duration. Its `time_step_s` compatibility property returns
+the common duration for a uniform grid and `None` for a variable grid.
 
 ## Temperature-Dependent Resistance
 
@@ -153,7 +179,8 @@ window before engineering use.
 - Parameters are educational placeholders and require sourced replacement for
   engineering decisions.
 - Current-profile timestamps are treated as interval starts with piecewise
-  constant current and ambient temperature over each interval.
+  constant current and ambient temperature over each interval. Explicit
+  durations may vary, but the model does not interpolate within an interval.
 - Exact integration applies only to the model's linear within-interval
   equation; nonlinear resistance maps or radiation would require a different
   solver.
