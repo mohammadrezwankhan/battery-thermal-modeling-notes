@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from models.lumped_cell_thermal import (
+    IntegrationMethod,
     LumpedThermalSpec,
     load_current_profile,
     main,
@@ -46,6 +47,71 @@ class LumpedCellThermalTests(unittest.TestCase):
             result.temperature_c[-1],
             spec.ambient_temperature_c + steady_rise_c,
         )
+
+    def test_exact_linear_matches_constant_current_analytic_solution(self):
+        spec = LumpedThermalSpec(
+            time_step_s=600.0,
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        current_a = 75.0
+        result = simulate_lumped_temperature([current_a], spec)
+
+        steady_rise_c = (
+            current_a * current_a * spec.resistance_ohm / spec.heat_transfer_w_per_k
+        )
+        expected_c = spec.ambient_temperature_c + steady_rise_c * (
+            1.0
+            - math.exp(
+                -spec.heat_transfer_w_per_k
+                * spec.time_step_s
+                / spec.thermal_capacity_j_per_k
+            )
+        )
+        self.assertAlmostEqual(result.temperature_c[-1], expected_c, places=12)
+        self.assertIs(result.integration_method, IntegrationMethod.EXACT_LINEAR)
+        self.assertLess(result.energy_balance_error_j, 1e-9)
+
+    def test_exact_linear_matches_temperature_feedback_solution(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            resistance_ohm=0.01,
+            resistance_temperature_coefficient_per_k=0.02,
+            resistance_reference_temperature_c=25.0,
+            heat_transfer_w_per_k=0.0,
+            initial_temperature_c=25.0,
+            time_step_s=100.0,
+            integration_method="exact-linear",
+        )
+        result = simulate_lumped_temperature([100.0], spec)
+        expected_rise_c = math.expm1(0.2) / 0.02
+
+        self.assertAlmostEqual(
+            result.temperature_c[-1],
+            spec.initial_temperature_c + expected_rise_c,
+            places=12,
+        )
+        self.assertGreater(
+            result.interval_net_heat_j[0],
+            result.heat_generation_w[0] * spec.time_step_s,
+        )
+
+    def test_exact_linear_handles_zero_net_feedback_slope(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            resistance_ohm=0.01,
+            resistance_temperature_coefficient_per_k=0.01,
+            resistance_reference_temperature_c=25.0,
+            heat_transfer_w_per_k=1.0,
+            ambient_temperature_c=25.0,
+            initial_temperature_c=25.0,
+            time_step_s=100.0,
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        result = simulate_lumped_temperature([100.0], spec)
+        self.assertAlmostEqual(result.temperature_c[-1], 35.0, places=12)
+        self.assertAlmostEqual(result.interval_net_heat_j[0], 10_000.0, places=9)
 
     def test_discrete_energy_balance_closes(self):
         profile = [80.0] * 300 + [0.0] * 300
@@ -147,6 +213,11 @@ class LumpedCellThermalTests(unittest.TestCase):
                     resistance_temperature_coefficient_per_k=-0.10,
                 ),
             )
+        with self.assertRaisesRegex(ValueError, "integration_method must be one of"):
+            simulate_lumped_temperature(
+                [10.0],
+                LumpedThermalSpec(integration_method="runge-kutta"),
+            )
 
     def test_rejects_empty_or_nonfinite_current_profiles(self):
         with self.assertRaisesRegex(ValueError, "at least one interval"):
@@ -225,6 +296,31 @@ class LumpedCellThermalTests(unittest.TestCase):
             result.integrated_net_heat_j,
         )
 
+    def test_exact_linear_export_uses_integrated_interval_heat(self):
+        result = simulate_lumped_temperature(
+            [100.0],
+            LumpedThermalSpec(
+                time_step_s=120.0,
+                resistance_temperature_coefficient_per_k=0.02,
+                integration_method=IntegrationMethod.EXACT_LINEAR,
+            ),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "result.csv"
+            write_simulation_csv(path, result)
+            with path.open("r", encoding="utf-8", newline="") as output_file:
+                row = next(csv.DictReader(output_file))
+        self.assertAlmostEqual(
+            float(row["net_heat_j"]),
+            result.interval_net_heat_j[0],
+            places=7,
+        )
+        self.assertAlmostEqual(
+            result.integrated_net_heat_j,
+            result.stored_energy_change_j,
+            places=9,
+        )
+
     def test_cli_runs_profile_and_exports_results(self):
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "profile.csv"
@@ -268,6 +364,29 @@ class LumpedCellThermalTests(unittest.TestCase):
             output.split("Resistance range: 0.004000 to ", 1)[1].split(" ", 1)[0]
         )
         self.assertGreater(upper_resistance, 0.004)
+
+    def test_cli_reports_exact_linear_integration(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a",
+                    "75",
+                    "--duration-s",
+                    "600",
+                    "--time-step-s",
+                    "600",
+                    "--integration-method",
+                    "exact-linear",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        output = standard_output.getvalue()
+        self.assertIn("Integration method: exact-linear", output)
+        energy_error_j = float(
+            output.split("Energy-balance error: ", 1)[1].split(" ", 1)[0]
+        )
+        self.assertLess(energy_error_j, 1e-9)
 
     def test_cli_uses_profile_ambient_in_export(self):
         with tempfile.TemporaryDirectory() as directory:
