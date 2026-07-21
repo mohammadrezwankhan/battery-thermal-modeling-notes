@@ -698,6 +698,25 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.time_step_s, 60.0)
         self.assertEqual(profile.interval_duration_s, (60.0, 60.0, 60.0))
 
+    def test_loads_csv_with_comments_and_blank_lines(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "# profile for discharge profile\n"
+                "\n"
+                "time_s,current_a\n"
+                "0,0\n"
+                "# step 2\n"
+                "30,10\n"
+                "\n"
+                "60,-5\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.time_s, (0.0, 30.0, 60.0))
+        self.assertEqual(profile.current_a, (0.0, 10.0, -5.0))
+        self.assertEqual(profile.interval_duration_s, (30.0, 30.0, 30.0))
+
     def test_loads_explicit_nonuniform_interval_durations(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "profile.csv"
