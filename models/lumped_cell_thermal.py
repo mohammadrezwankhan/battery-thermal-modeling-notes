@@ -29,6 +29,7 @@ class LumpedThermalSpec:
     resistance_temperature_coefficient_per_k: float = 0.0
     resistance_reference_temperature_c: float = 25.0
     entropic_coefficient_v_per_k: float = 0.0
+    external_heat_w: float = 0.0
     heat_transfer_w_per_k: float = 1.2
     emissivity: float = 0.0
     radiating_area_m2: float = 0.0
@@ -62,6 +63,7 @@ class LumpedThermalSpec:
                 self.resistance_reference_temperature_c
             ),
             "entropic_coefficient_v_per_k": self.entropic_coefficient_v_per_k,
+            "external_heat_w": self.external_heat_w,
             "heat_transfer_w_per_k": self.heat_transfer_w_per_k,
             "emissivity": self.emissivity,
             "radiating_area_m2": self.radiating_area_m2,
@@ -194,6 +196,7 @@ class ThermalSimulation:
     heat_transfer_w_per_k: tuple[float, ...]
     resistance_ohm: tuple[float, ...]
     entropic_coefficient_v_per_k: tuple[float, ...]
+    external_heat_w: tuple[float, ...]
     irreversible_heat_w: tuple[float, ...]
     reversible_heat_w: tuple[float, ...]
     heat_generation_w: tuple[float, ...]
@@ -257,6 +260,7 @@ class CurrentProfile:
     ambient_temperature_c: tuple[float, ...] | None
     radiative_surroundings_temperature_c: tuple[float, ...] | None
     entropic_coefficient_v_per_k: tuple[float, ...] | None
+    external_heat_w: tuple[float, ...] | None
     heat_transfer_w_per_k: tuple[float, ...] | None
     interval_duration_s: tuple[float, ...]
 
@@ -285,6 +289,7 @@ class HeatRates:
     resistance_ohm: float
     irreversible_w: float
     reversible_w: float
+    external_w: float
     generation_w: float
     convective_rejection_w: float
     radiative_rejection_w: float
@@ -307,6 +312,7 @@ def _heat_rates(
     ambient_temperature_c: float,
     radiative_surroundings_temperature_c: float,
     entropic_coefficient_v_per_k: float,
+    external_heat_w: float,
     heat_transfer_w_per_k: float,
 ) -> HeatRates:
     resistance_ohm = spec.resistance_at_temperature(temperature_c)
@@ -316,7 +322,7 @@ def _heat_rates(
         temperature_c,
         entropic_coefficient_v_per_k,
     )
-    generation_w = irreversible_w + reversible_w
+    generation_w = irreversible_w + reversible_w + external_heat_w
     convective_rejection_w = heat_transfer_w_per_k * (
         temperature_c - ambient_temperature_c
     )
@@ -329,6 +335,7 @@ def _heat_rates(
         resistance_ohm=resistance_ohm,
         irreversible_w=irreversible_w,
         reversible_w=reversible_w,
+        external_w=external_heat_w,
         generation_w=generation_w,
         convective_rejection_w=convective_rejection_w,
         radiative_rejection_w=radiative_rejection_w,
@@ -344,6 +351,7 @@ def _rk4_temperature_change_c(
     ambient_temperature_c: float,
     radiative_surroundings_temperature_c: float,
     entropic_coefficient_v_per_k: float,
+    external_heat_w: float,
     heat_transfer_w_per_k: float,
     interval_duration_s: float,
 ) -> float:
@@ -361,6 +369,7 @@ def _rk4_temperature_change_c(
             ambient_temperature_c,
             radiative_surroundings_temperature_c,
             entropic_coefficient_v_per_k,
+            external_heat_w,
             heat_transfer_w_per_k,
         )
         return rates.net_w / spec.thermal_capacity_j_per_k
@@ -389,6 +398,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
             "ambient_temperature_c",
             "radiative_surroundings_temperature_c",
             "entropic_coefficient_v_per_k",
+            "external_heat_w",
             "heat_transfer_w_per_k",
         ]
         fieldnames = reader.fieldnames or []
@@ -403,7 +413,8 @@ def load_current_profile(path: Path) -> CurrentProfile:
                 "profile CSV header must be exactly time_s,current_a followed by "
                 "any of duration_s,ambient_temperature_c,"
                 "radiative_surroundings_temperature_c,"
-                "entropic_coefficient_v_per_k,heat_transfer_w_per_k in that order"
+                "entropic_coefficient_v_per_k,external_heat_w,"
+                "heat_transfer_w_per_k in that order"
             )
         has_ambient = "ambient_temperature_c" in fieldnames
         has_radiative_surroundings = (
@@ -411,6 +422,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
         )
         has_duration = "duration_s" in fieldnames
         has_entropic_coefficient = "entropic_coefficient_v_per_k" in fieldnames
+        has_external_heat = "external_heat_w" in fieldnames
         has_heat_transfer = "heat_transfer_w_per_k" in fieldnames
         rows = list(reader)
 
@@ -425,6 +437,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
     ambient_temperatures: list[float] = []
     radiative_surroundings_temperatures: list[float] = []
     entropic_coefficients: list[float] = []
+    external_heats: list[float] = []
     heat_transfers: list[float] = []
     for line_number, row in enumerate(rows, start=2):
         try:
@@ -444,6 +457,9 @@ def load_current_profile(path: Path) -> CurrentProfile:
                 if has_entropic_coefficient
                 else None
             )
+            external_heat_w = (
+                float(row["external_heat_w"]) if has_external_heat else None
+            )
             heat_transfer_w_per_k = (
                 float(row["heat_transfer_w_per_k"]) if has_heat_transfer else None
             )
@@ -460,6 +476,8 @@ def load_current_profile(path: Path) -> CurrentProfile:
             values.append(radiative_surroundings_temperature_c)
         if entropic_coefficient_v_per_k is not None:
             values.append(entropic_coefficient_v_per_k)
+        if external_heat_w is not None:
+            values.append(external_heat_w)
         if heat_transfer_w_per_k is not None:
             values.append(heat_transfer_w_per_k)
         if None in row or any(not math.isfinite(value) for value in values):
@@ -494,6 +512,8 @@ def load_current_profile(path: Path) -> CurrentProfile:
             )
         if entropic_coefficient_v_per_k is not None:
             entropic_coefficients.append(entropic_coefficient_v_per_k)
+        if external_heat_w is not None:
+            external_heats.append(external_heat_w)
         if heat_transfer_w_per_k is not None:
             heat_transfers.append(heat_transfer_w_per_k)
 
@@ -547,6 +567,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
         entropic_coefficient_v_per_k=(
             tuple(entropic_coefficients) if has_entropic_coefficient else None
         ),
+        external_heat_w=(tuple(external_heats) if has_external_heat else None),
         heat_transfer_w_per_k=(tuple(heat_transfers) if has_heat_transfer else None),
         interval_duration_s=tuple(durations),
     )
@@ -559,6 +580,7 @@ def simulate_lumped_temperature(
     radiative_surroundings_temperatures_c: Sequence[float] | None = None,
     interval_durations_s: Sequence[float] | None = None,
     entropic_coefficients_v_per_k: Sequence[float] | None = None,
+    external_heats_w: Sequence[float] | None = None,
     heat_transfers_w_per_k: Sequence[float] | None = None,
 ) -> ThermalSimulation:
     """Integrate a one-node thermal balance over piecewise-constant intervals."""
@@ -640,6 +662,17 @@ def simulate_lumped_temperature(
         if any(not math.isfinite(value) for value in entropic_coefficients):
             raise ValueError("all entropic coefficient values must be finite")
 
+    if external_heats_w is None:
+        external_heats = (spec.external_heat_w,) * len(currents)
+    else:
+        external_heats = tuple(float(value) for value in external_heats_w)
+        if len(external_heats) != len(currents):
+            raise ValueError(
+                "external_heats_w must contain one value per current interval"
+            )
+        if any(not math.isfinite(value) for value in external_heats):
+            raise ValueError("all external heat values must be finite")
+
     if heat_transfers_w_per_k is None:
         heat_transfers = (spec.heat_transfer_w_per_k,) * len(currents)
     else:
@@ -670,6 +703,7 @@ def simulate_lumped_temperature(
         radiative_surroundings_temperature_c,
         interval_duration_s,
         entropic_coefficient_v_per_k,
+        external_heat_w,
         heat_transfer_w_per_k,
     ) in zip(
         currents,
@@ -677,6 +711,7 @@ def simulate_lumped_temperature(
         radiative_surroundings_temperatures,
         interval_durations,
         entropic_coefficients,
+        external_heats,
         heat_transfers,
         strict=True,
     ):
@@ -688,6 +723,7 @@ def simulate_lumped_temperature(
             ambient_temperature_c,
             radiative_surroundings_temperature_c,
             entropic_coefficient_v_per_k,
+            external_heat_w,
             heat_transfer_w_per_k,
         )
         if integration_method is IntegrationMethod.EXPLICIT_EULER:
@@ -729,6 +765,7 @@ def simulate_lumped_temperature(
                 ambient_temperature_c,
                 radiative_surroundings_temperature_c,
                 entropic_coefficient_v_per_k,
+                external_heat_w,
                 heat_transfer_w_per_k,
                 interval_duration_s,
             )
@@ -764,6 +801,7 @@ def simulate_lumped_temperature(
         heat_transfer_w_per_k=heat_transfers,
         resistance_ohm=tuple(interval_resistance),
         entropic_coefficient_v_per_k=tuple(interval_entropic_coefficient),
+        external_heat_w=external_heats,
         irreversible_heat_w=tuple(irreversible_heat),
         reversible_heat_w=tuple(reversible_heat),
         heat_generation_w=tuple(generated_heat),
@@ -796,6 +834,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "radiating_area_m2",
         "resistance_ohm",
         "entropic_coefficient_v_per_k",
+        "external_heat_w",
         "start_temperature_c",
         "end_temperature_c",
         "irreversible_heat_w",
@@ -828,6 +867,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "entropic_coefficient_v_per_k": (
                     result.entropic_coefficient_v_per_k[index]
                 ),
+                "external_heat_w": result.external_heat_w[index],
                 "start_temperature_c": result.temperature_c[index],
                 "end_temperature_c": result.temperature_c[index + 1],
                 "irreversible_heat_w": result.irreversible_heat_w[index],
@@ -868,6 +908,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=25.0,
     )
     parser.add_argument("--entropic-coefficient-v-per-k", type=float)
+    parser.add_argument("--external-heat-w", type=float)
     parser.add_argument("--heat-transfer-w-per-k", type=float)
     parser.add_argument("--emissivity", type=float, default=0.0)
     parser.add_argument("--radiating-area-m2", type=float, default=0.0)
@@ -891,6 +932,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     radiative_surroundings_temperatures_c = None
     interval_durations_s = None
     entropic_coefficients_v_per_k = None
+    external_heats_w = None
     heat_transfers_w_per_k = None
     if args.profile_csv:
         conflicting = [
@@ -935,6 +977,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "--heat-transfer-w-per-k cannot be combined with a profile "
                 "that contains heat_transfer_w_per_k"
             )
+        if profile.external_heat_w is not None and args.external_heat_w is not None:
+            raise ValueError(
+                "--external-heat-w cannot be combined with a profile that "
+                "contains external_heat_w"
+            )
         currents = profile.current_a
         ambient_temperatures_c = profile.ambient_temperature_c
         radiative_surroundings_temperatures_c = (
@@ -942,6 +989,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         interval_durations_s = profile.interval_duration_s
         entropic_coefficients_v_per_k = profile.entropic_coefficient_v_per_k
+        external_heats_w = profile.external_heat_w
         heat_transfers_w_per_k = profile.heat_transfer_w_per_k
         time_step_s = profile.time_step_s or profile.interval_duration_s[0]
     else:
@@ -979,6 +1027,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.entropic_coefficient_v_per_k is None
             else args.entropic_coefficient_v_per_k
         ),
+        external_heat_w=(0.0 if args.external_heat_w is None else args.external_heat_w),
         heat_transfer_w_per_k=(
             1.2 if args.heat_transfer_w_per_k is None else args.heat_transfer_w_per_k
         ),
@@ -1002,6 +1051,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         interval_durations_s=interval_durations_s,
         entropic_coefficients_v_per_k=entropic_coefficients_v_per_k,
+        external_heats_w=external_heats_w,
         heat_transfers_w_per_k=heat_transfers_w_per_k,
     )
 
@@ -1038,6 +1088,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "Reversible heat range: "
         f"{min(result.reversible_heat_w):.6f} to "
         f"{max(result.reversible_heat_w):.6f} W"
+    )
+    print(
+        "External heat range: "
+        f"{min(result.external_heat_w):.6f} to "
+        f"{max(result.external_heat_w):.6f} W"
     )
     print(
         "Total heat-source range: "

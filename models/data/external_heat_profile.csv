@@ -1,0 +1,4 @@
+time_s,current_a,duration_s,external_heat_w
+0,0,120,12
+120,0,60,-4
+180,50,120,0
