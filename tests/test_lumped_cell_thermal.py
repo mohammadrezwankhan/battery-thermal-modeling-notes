@@ -153,6 +153,61 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(result.reversible_heat_w, (0.0, 0.0))
         self.assertEqual(result.irreversible_heat_w, result.heat_generation_w)
 
+    def test_constant_external_heat_matches_adiabatic_energy_rise(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1000.0,
+                resistance_ohm=0.0,
+                external_heat_w=10.0,
+                heat_transfer_w_per_k=0.0,
+                time_step_s=50.0,
+            ),
+        )
+
+        self.assertEqual(result.external_heat_w, (10.0, 10.0))
+        self.assertEqual(result.heat_generation_w, (10.0, 10.0))
+        self.assertEqual(result.temperature_c, (25.0, 25.5, 26.0))
+        self.assertAlmostEqual(result.stored_energy_change_j, 1000.0)
+        self.assertAlmostEqual(result.energy_balance_error_j, 0.0)
+
+    def test_exact_linear_external_heat_matches_closed_form_cooling(self):
+        result = simulate_lumped_temperature(
+            [0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1000.0,
+                resistance_ohm=0.0,
+                external_heat_w=100.0,
+                heat_transfer_w_per_k=10.0,
+                time_step_s=100.0,
+                integration_method=IntegrationMethod.EXACT_LINEAR,
+            ),
+        )
+
+        expected_temperature_c = 25.0 + 10.0 * (1.0 - math.exp(-1.0))
+        self.assertAlmostEqual(result.temperature_c[-1], expected_temperature_c)
+        self.assertAlmostEqual(result.energy_balance_error_j, 0.0)
+
+    def test_interval_external_heat_profile_overrides_constant_spec_value(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1000.0,
+                resistance_ohm=0.0,
+                external_heat_w=1.0,
+                heat_transfer_w_per_k=0.0,
+                time_step_s=100.0,
+            ),
+            external_heats_w=[10.0, -5.0],
+        )
+
+        self.assertEqual(result.external_heat_w, (10.0, -5.0))
+        self.assertEqual(result.temperature_c, (25.0, 26.0, 25.5))
+        self.assertAlmostEqual(result.energy_balance_error_j, 0.0)
+
     def test_reversible_heat_changes_sign_with_current_direction(self):
         spec = LumpedThermalSpec(
             entropic_coefficient_v_per_k=0.0001,
@@ -373,6 +428,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertIsNone(profile.ambient_temperature_c)
         self.assertIsNone(profile.radiative_surroundings_temperature_c)
         self.assertIsNone(profile.entropic_coefficient_v_per_k)
+        self.assertIsNone(profile.external_heat_w)
         self.assertEqual(profile.time_step_s, 60.0)
         self.assertEqual(profile.interval_duration_s, (60.0, 60.0, 60.0))
 
@@ -455,6 +511,31 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.interval_duration_s, (300.0, 300.0))
         self.assertEqual(profile.ambient_temperature_c, (35.0, 35.0))
         self.assertEqual(profile.heat_transfer_w_per_k, (0.6, 4.0))
+
+    def test_loads_profile_with_signed_external_heat(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s,external_heat_w\n"
+                "0,0,100,10\n"
+                "100,0,100,-5\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.interval_duration_s, (100.0, 100.0))
+        self.assertEqual(profile.external_heat_w, (10.0, -5.0))
+
+    def test_rejects_invalid_external_heat_profile(self):
+        with self.assertRaisesRegex(ValueError, "one value per current interval"):
+            simulate_lumped_temperature(
+                [0.0, 0.0],
+                external_heats_w=[1.0],
+            )
+        with self.assertRaisesRegex(ValueError, "external heat values must be finite"):
+            simulate_lumped_temperature(
+                [0.0],
+                external_heats_w=[math.nan],
+            )
 
     def test_interval_ambient_changes_heat_rejection_and_temperature(self):
         constant = simulate_lumped_temperature([0.0, 0.0])
@@ -656,6 +737,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(float(rows[0]["heat_transfer_w_per_k"]), 1.2)
         self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
         self.assertEqual(float(rows[0]["entropic_coefficient_v_per_k"]), 0.0)
+        self.assertEqual(float(rows[0]["external_heat_w"]), 0.0)
         self.assertEqual(float(rows[0]["reversible_heat_w"]), 0.0)
         self.assertEqual(
             float(rows[0]["irreversible_heat_w"]),
@@ -788,6 +870,70 @@ class LumpedCellThermalTests(unittest.TestCase):
         output = standard_output.getvalue()
         self.assertIn("Entropic coefficient range: 0.0001 to 0.0001 V/K", output)
         self.assertIn("Reversible heat range: -2.981500 to -2.981500 W", output)
+
+    def test_cli_applies_constant_external_heat(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a",
+                    "0",
+                    "--duration-s",
+                    "100",
+                    "--time-step-s",
+                    "100",
+                    "--external-heat-w",
+                    "10",
+                    "--heat-transfer-w-per-k",
+                    "0",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        output = standard_output.getvalue()
+        self.assertIn("External heat range: 10.000000 to 10.000000 W", output)
+        self.assertIn("Final temperature: 25.952 degC", output)
+
+    def test_cli_runs_external_heat_profile_and_exports_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a,duration_s,external_heat_w\n"
+                "0,0,100,10\n"
+                "100,0,100,-5\n",
+                encoding="utf-8",
+            )
+            standard_output = io.StringIO()
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--output-csv",
+                        str(output_path),
+                        "--heat-transfer-w-per-k",
+                        "0",
+                    ]
+                )
+            with output_path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "External heat range: -5.000000 to 10.000000 W",
+            standard_output.getvalue(),
+        )
+        self.assertEqual(
+            [float(row["external_heat_w"]) for row in rows],
+            [10.0, -5.0],
+        )
+        for row in rows:
+            self.assertAlmostEqual(
+                float(row["heat_generation_w"]),
+                float(row["irreversible_heat_w"])
+                + float(row["reversible_heat_w"])
+                + float(row["external_heat_w"]),
+                places=9,
+            )
 
     def test_cli_runs_entropic_profile_and_exports_heat_components(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -973,6 +1119,24 @@ class LumpedCellThermalTests(unittest.TestCase):
                         str(profile_path),
                         "--entropic-coefficient-v-per-k",
                         "0.0002",
+                    ]
+                )
+
+    def test_profile_external_heat_rejects_constant_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            profile_path.write_text(
+                "time_s,current_a,external_heat_w\n"
+                "0,0,10\n1,10,-5\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cannot be combined"):
+                main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--external-heat-w",
+                        "2",
                     ]
                 )
 
