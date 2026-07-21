@@ -102,8 +102,8 @@ class ThermalSimulation:
     heat_generation_w: tuple[float, ...]
     heat_rejection_w: tuple[float, ...]
     interval_net_heat_j: tuple[float, ...]
+    interval_duration_s: tuple[float, ...]
     thermal_capacity_j_per_k: float
-    time_step_s: float
     integration_method: IntegrationMethod
 
     @property
@@ -124,44 +124,96 @@ class ThermalSimulation:
     def energy_balance_error_j(self) -> float:
         return abs(self.stored_energy_change_j - self.integrated_net_heat_j)
 
+    @property
+    def duration_s(self) -> float:
+        return sum(self.interval_duration_s)
+
+    @property
+    def time_step_s(self) -> float | None:
+        """Return the common interval duration, or None for a variable grid."""
+
+        first_duration = self.interval_duration_s[0]
+        if all(
+            math.isclose(
+                duration,
+                first_duration,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            for duration in self.interval_duration_s[1:]
+        ):
+            return first_duration
+        return None
+
 
 @dataclass(frozen=True)
 class CurrentProfile:
-    """Uniform interval-start timestamps, current, and optional ambient."""
+    """Interval-start timestamps, durations, current, and optional ambient."""
 
     time_s: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...] | None
-    time_step_s: float
+    interval_duration_s: tuple[float, ...]
+
+    @property
+    def time_step_s(self) -> float | None:
+        """Return the common interval duration, or None for a variable grid."""
+
+        first_duration = self.interval_duration_s[0]
+        if all(
+            math.isclose(
+                duration,
+                first_duration,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            for duration in self.interval_duration_s[1:]
+        ):
+            return first_duration
+        return None
 
 
 def load_current_profile(path: Path) -> CurrentProfile:
-    """Load a strict current profile with an optional ambient column."""
+    """Load a strict current profile with optional duration and ambient columns."""
 
     with path.open("r", encoding="utf-8", newline="") as profile_file:
         reader = csv.DictReader(profile_file)
         supported_headers = (
             ["time_s", "current_a"],
             ["time_s", "current_a", "ambient_temperature_c"],
+            ["time_s", "current_a", "duration_s"],
+            [
+                "time_s",
+                "current_a",
+                "duration_s",
+                "ambient_temperature_c",
+            ],
         )
         if reader.fieldnames not in supported_headers:
             raise ValueError(
-                "profile CSV header must be exactly: time_s,current_a or "
-                "time_s,current_a,ambient_temperature_c"
+                "profile CSV header must be exactly one of: time_s,current_a; "
+                "time_s,current_a,ambient_temperature_c; "
+                "time_s,current_a,duration_s; or "
+                "time_s,current_a,duration_s,ambient_temperature_c"
             )
         has_ambient = "ambient_temperature_c" in reader.fieldnames
+        has_duration = "duration_s" in reader.fieldnames
         rows = list(reader)
 
-    if len(rows) < 2:
+    if not rows:
+        raise ValueError("profile CSV must contain at least one interval")
+    if not has_duration and len(rows) < 2:
         raise ValueError("profile CSV must contain at least two intervals")
 
     times: list[float] = []
     currents: list[float] = []
+    durations: list[float] = []
     ambient_temperatures: list[float] = []
     for line_number, row in enumerate(rows, start=2):
         try:
             time_s = float(row["time_s"])
             current_a = float(row["current_a"])
+            duration_s = float(row["duration_s"]) if has_duration else None
             ambient_temperature_c = (
                 float(row["ambient_temperature_c"]) if has_ambient else None
             )
@@ -170,41 +222,66 @@ def load_current_profile(path: Path) -> CurrentProfile:
                 f"profile CSV line {line_number} must contain numeric values"
             ) from error
         values = [time_s, current_a]
+        if duration_s is not None:
+            values.append(duration_s)
         if ambient_temperature_c is not None:
             values.append(ambient_temperature_c)
         if None in row or any(not math.isfinite(value) for value in values):
             raise ValueError(f"profile CSV line {line_number} must be finite")
+        if duration_s is not None and duration_s <= 0.0:
+            raise ValueError(
+                f"profile CSV line {line_number} duration_s must be positive"
+            )
         times.append(time_s)
         currents.append(current_a)
+        if duration_s is not None:
+            durations.append(duration_s)
         if ambient_temperature_c is not None:
             ambient_temperatures.append(ambient_temperature_c)
 
     if not math.isclose(times[0], 0.0, rel_tol=0.0, abs_tol=1e-12):
         raise ValueError("profile CSV time_s must start at zero")
-    time_step_s = times[1] - times[0]
-    if time_step_s <= 0.0:
-        raise ValueError("profile CSV timestamps must be strictly increasing")
-    for index, (previous, current) in enumerate(
-        zip(times, times[1:], strict=False), start=3
-    ):
-        step = current - previous
-        if step <= 0.0:
-            raise ValueError(
-                f"profile CSV line {index} timestamp must be strictly increasing"
-            )
-        if not math.isclose(
-            step,
-            time_step_s,
-            rel_tol=1e-9,
-            abs_tol=1e-12,
+    if has_duration:
+        for index, (previous_start, previous_duration, current_start) in enumerate(
+            zip(times, durations, times[1:], strict=False), start=3
         ):
-            raise ValueError("profile CSV timestamps must use a uniform time step")
+            expected_start = previous_start + previous_duration
+            if not math.isclose(
+                current_start,
+                expected_start,
+                rel_tol=1e-9,
+                abs_tol=1e-12,
+            ):
+                raise ValueError(
+                    f"profile CSV line {index} time_s must equal the previous "
+                    "interval end"
+                )
+    else:
+        time_step_s = times[1] - times[0]
+        if time_step_s <= 0.0:
+            raise ValueError("profile CSV timestamps must be strictly increasing")
+        for index, (previous, current) in enumerate(
+            zip(times, times[1:], strict=False), start=3
+        ):
+            step = current - previous
+            if step <= 0.0:
+                raise ValueError(
+                    f"profile CSV line {index} timestamp must be strictly increasing"
+                )
+            if not math.isclose(
+                step,
+                time_step_s,
+                rel_tol=1e-9,
+                abs_tol=1e-12,
+            ):
+                raise ValueError("profile CSV timestamps must use a uniform time step")
+        durations = [time_step_s] * len(times)
 
     return CurrentProfile(
         time_s=tuple(times),
         current_a=tuple(currents),
         ambient_temperature_c=(tuple(ambient_temperatures) if has_ambient else None),
-        time_step_s=time_step_s,
+        interval_duration_s=tuple(durations),
     )
 
 
@@ -212,6 +289,7 @@ def simulate_lumped_temperature(
     currents_a: Sequence[float],
     spec: LumpedThermalSpec = LumpedThermalSpec(),
     ambient_temperatures_c: Sequence[float] | None = None,
+    interval_durations_s: Sequence[float] | None = None,
 ) -> ThermalSimulation:
     """Integrate a one-node thermal balance over piecewise-constant intervals."""
 
@@ -222,6 +300,19 @@ def simulate_lumped_temperature(
         raise ValueError("currents_a must contain at least one interval")
     if any(not math.isfinite(current) for current in currents):
         raise ValueError("all current values must be finite")
+
+    if interval_durations_s is None:
+        interval_durations = (spec.time_step_s,) * len(currents)
+    else:
+        interval_durations = tuple(float(value) for value in interval_durations_s)
+        if len(interval_durations) != len(currents):
+            raise ValueError(
+                "interval_durations_s must contain one value per current interval"
+            )
+        if any(not math.isfinite(value) for value in interval_durations):
+            raise ValueError("all interval duration values must be finite")
+        if any(value <= 0.0 for value in interval_durations):
+            raise ValueError("all interval duration values must be positive")
 
     if ambient_temperatures_c is None:
         ambient_temperatures = (spec.ambient_temperature_c,) * len(currents)
@@ -242,8 +333,11 @@ def simulate_lumped_temperature(
     interval_net_heat: list[float] = []
     interval_resistance: list[float] = []
 
-    for current, ambient_temperature_c in zip(
-        currents, ambient_temperatures, strict=True
+    for current, ambient_temperature_c, interval_duration_s in zip(
+        currents,
+        ambient_temperatures,
+        interval_durations,
+        strict=True,
     ):
         temperature = temperatures[-1]
         resistance_ohm = spec.resistance_at_temperature(temperature)
@@ -252,7 +346,7 @@ def simulate_lumped_temperature(
         net_heat_w = generation_w - rejection_w
         if integration_method is IntegrationMethod.EXPLICIT_EULER:
             temperature_change_c = (
-                net_heat_w * spec.time_step_s / spec.thermal_capacity_j_per_k
+                net_heat_w * interval_duration_s / spec.thermal_capacity_j_per_k
             )
         else:
             thermal_feedback_w_per_k = (
@@ -264,12 +358,12 @@ def simulate_lumped_temperature(
             )
             if thermal_feedback_w_per_k == 0.0:
                 temperature_change_c = (
-                    net_heat_w * spec.time_step_s / spec.thermal_capacity_j_per_k
+                    net_heat_w * interval_duration_s / spec.thermal_capacity_j_per_k
                 )
             else:
                 exponent = (
                     thermal_feedback_w_per_k
-                    * spec.time_step_s
+                    * interval_duration_s
                     / spec.thermal_capacity_j_per_k
                 )
                 try:
@@ -292,9 +386,11 @@ def simulate_lumped_temperature(
         interval_net_heat.append(temperature_change_c * spec.thermal_capacity_j_per_k)
         temperatures.append(next_temperature_c)
 
-    times = tuple(index * spec.time_step_s for index in range(len(currents) + 1))
+    times = [0.0]
+    for duration_s in interval_durations:
+        times.append(times[-1] + duration_s)
     return ThermalSimulation(
-        time_s=times,
+        time_s=tuple(times),
         temperature_c=tuple(temperatures),
         current_a=currents,
         ambient_temperature_c=ambient_temperatures,
@@ -302,8 +398,8 @@ def simulate_lumped_temperature(
         heat_generation_w=tuple(generated_heat),
         heat_rejection_w=tuple(rejected_heat),
         interval_net_heat_j=tuple(interval_net_heat),
+        interval_duration_s=interval_durations,
         thermal_capacity_j_per_k=spec.thermal_capacity_j_per_k,
-        time_step_s=spec.time_step_s,
         integration_method=integration_method,
     )
 
@@ -315,6 +411,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
     fieldnames = [
         "interval_start_s",
         "interval_end_s",
+        "duration_s",
         "current_a",
         "ambient_temperature_c",
         "resistance_ohm",
@@ -333,6 +430,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
             values = {
                 "interval_start_s": result.time_s[index],
                 "interval_end_s": result.time_s[index + 1],
+                "duration_s": result.interval_duration_s[index],
                 "current_a": current_a,
                 "ambient_temperature_c": result.ambient_temperature_c[index],
                 "resistance_ohm": result.resistance_ohm[index],
@@ -383,6 +481,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     ambient_temperatures_c = None
+    interval_durations_s = None
     if args.profile_csv:
         conflicting = [
             name
@@ -403,7 +502,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         currents = profile.current_a
         ambient_temperatures_c = profile.ambient_temperature_c
-        time_step_s = profile.time_step_s
+        interval_durations_s = profile.interval_duration_s
+        time_step_s = profile.time_step_s or profile.interval_duration_s[0]
     else:
         current_a = 75.0 if args.current_a is None else args.current_a
         duration_s = 600.0 if args.duration_s is None else args.duration_s
@@ -440,13 +540,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         time_step_s=time_step_s,
         integration_method=args.integration_method,
     )
-    result = simulate_lumped_temperature(currents, spec, ambient_temperatures_c)
+    result = simulate_lumped_temperature(
+        currents,
+        spec,
+        ambient_temperatures_c,
+        interval_durations_s,
+    )
 
     if args.output_csv:
         write_simulation_csv(args.output_csv, result)
 
     print(f"Intervals: {len(currents)}")
-    print(f"Duration: {len(currents) * time_step_s:.3f} s")
+    print(f"Duration: {result.duration_s:.3f} s")
     print(f"Integration method: {result.integration_method.value}")
     print(f"Final temperature: {result.temperature_c[-1]:.3f} degC")
     print(f"Peak temperature: {result.peak_temperature_c:.3f} degC")
