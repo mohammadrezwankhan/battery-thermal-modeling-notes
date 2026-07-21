@@ -14,7 +14,9 @@ Q_irreversible = I^2 R
 Q_reversible = -I T_kelvin dU_oc/dT
 Q_generation = Q_irreversible + Q_reversible
 R(T) = R_ref [1 + alpha (T_cell - T_ref)]
-Q_rejection = h(t) (T_cell - T_ambient)
+Q_convection = h(t) (T_cell - T_ambient)
+Q_radiation = epsilon sigma A (T_cell_kelvin^4 - T_ambient_kelvin^4)
+Q_rejection = Q_convection + Q_radiation
 C_thermal dT/dt = Q_generation - Q_rejection
 C_thermal = mass * specific_heat
 ```
@@ -40,7 +42,8 @@ python models/lumped_cell_thermal.py `
 The default case represents a 75 A constant-current interval applied to a
 1.05 kg lumped cell with 1000 J/(kg K) specific heat, 4 mOhm resistance,
 zero resistance temperature coefficient, zero entropic coefficient, 1.2 W/K
-heat transfer, and 25 degC initial and ambient temperature.
+heat transfer, zero surface radiation, and 25 degC initial and ambient
+temperature.
 
 Run the regression checks with:
 
@@ -74,6 +77,42 @@ not make piecewise-constant current, ambient, parameter, or one-node
 assumptions more accurate. Keep explicit Euler for educational recurrence
 comparisons or backward-compatible result reproduction.
 
+## Nonlinear Surface Radiation
+
+Set both `--emissivity` and `--radiating-area-m2` to add net diffuse-gray
+surface radiation. The implementation uses the exact NIST CODATA
+Stefan-Boltzmann constant, `5.670374419e-8 W/(m^2 K^4)`, from the
+[2022 CODATA recommended values](https://physics.nist.gov/cuu/pdf/JPCRD2022CODATA.pdf).
+The supplied ambient temperature is also the effective radiative-surroundings
+temperature for each interval.
+
+Radiation makes the temperature balance nonlinear, so it requires the
+fourth-order Runge-Kutta method. `--rk4-max-step-s` bounds the internal solver
+step independently of the profile interval width:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/radiative_cooling_profile.csv `
+  --emissivity 0.85 --radiating-area-m2 0.03 `
+  --integration-method rk4 --rk4-max-step-s 0.5 `
+  --output-csv results/radiative_cooling_intervals.csv
+```
+
+The committed illustrative case reports a final temperature of `34.184 degC`,
+a peak of `54.479 degC`, and start-of-interval radiative heat rejection from
+`-1.612 W` to `4.448 W`. Negative rejection means the cooler cell receives net
+radiative heat from warmer surroundings. The result and CSV keep convection,
+radiation, and total heat rejection separate; integrated net heat remains the
+thermal-capacity change over each RK4 interval.
+
+The default emissivity and area are both zero, preserving every existing
+linear case. The two parameters must either both be zero or both be positive,
+emissivity is constrained to `[0, 1]`, and area must be nonnegative. The
+`exact-linear` method rejects enabled radiation rather than silently dropping
+the nonlinear term. This is a screening boundary: surface emissivity and area
+are constant, ambient stands in for radiative surroundings, and view factors,
+reflections, enclosure exchange, and wavelength dependence are excluded.
+
 ## Run A Current And Ambient Profile
 
 The CLI accepts a strict CSV containing interval-start timestamps and current
@@ -99,9 +138,10 @@ python models/lumped_cell_thermal.py `
 ```
 
 The output records interval boundaries and duration, current, start/end
-temperature, ambient temperature, heat-transfer coefficient, evaluated
-resistance, entropic coefficient, irreversible, reversible, total generated
-and rejected heat rates, and net interval heat.
+temperature, ambient temperature, heat-transfer coefficient, radiation
+parameters, evaluated resistance, entropic coefficient, irreversible,
+reversible, total generated, convective, radiative, and total rejected heat
+rates, and net interval heat.
 Profile mode derives the time step from the CSV and rejects `--current-a`,
 `--duration-s`, or `--time-step-s` overrides.
 
@@ -249,8 +289,9 @@ window before engineering use.
   coefficient; the model does not derive its SOC or chemistry dependence.
 - Mixing, phase-change, side-reaction, and interconnect heat are excluded.
 - The cell is represented by one uniform temperature state.
-- Heat transfer is linear; ambient and the effective heat-transfer coefficient
-  may vary by interval, but fluid dynamics, coolant thermal mass, actuator
+- Convection is linear; optional diffuse-gray radiation uses constant surface
+  emissivity and area with ambient as the radiative-surroundings temperature.
+  Fluid dynamics, coolant thermal mass, view factors, reflections, actuator
   dynamics, and feedback control are not represented.
 - Electrical SOC and voltage dynamics are outside this reference model.
 - Parameters are educational placeholders and require sourced replacement for
@@ -260,5 +301,5 @@ window before engineering use.
   each interval. Explicit durations may vary, but the model does not interpolate
   within an interval.
 - Exact integration applies only to the model's linear within-interval
-  equation; nonlinear resistance maps or radiation would require a different
-  solver.
+  equation. Surface radiation uses bounded-step RK4; nonlinear resistance
+  maps would require a separately validated extension.
