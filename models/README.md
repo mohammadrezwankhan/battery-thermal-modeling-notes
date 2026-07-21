@@ -151,7 +151,7 @@ produces reversible cooling during positive-current discharge and heating
 during negative-current charge under this convention.
 
 The equation and interpretation follow the electrode-sandwich heat balance in
-the [NREL Li-Ion Battery Thermal Characterization report](https://www.nrel.gov/docs/fy24osti/89032.pdf),
+the [NREL Li-Ion Battery Thermal Characterization paper](https://www.osti.gov/biblio/2349292),
 which separates irreversible overpotential heat from reversible entropic heat.
 Coefficient sign and magnitude vary with chemistry, SOC, and test method, so
 replace the illustrative values with cell-specific measurements.
