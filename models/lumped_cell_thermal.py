@@ -33,6 +33,7 @@ class LumpedThermalSpec:
     emissivity: float = 0.0
     radiating_area_m2: float = 0.0
     ambient_temperature_c: float = 25.0
+    radiative_surroundings_temperature_c: float | None = None
     initial_temperature_c: float = 25.0
     time_step_s: float = 1.0
     rk4_max_step_s: float = 1.0
@@ -94,6 +95,11 @@ class LumpedThermalSpec:
         if self.rk4_max_step_s <= 0.0:
             raise ValueError("rk4_max_step_s must be positive")
         _temperature_k(self.ambient_temperature_c, "ambient_temperature_c")
+        if self.radiative_surroundings_temperature_c is not None:
+            _temperature_k(
+                self.radiative_surroundings_temperature_c,
+                "radiative_surroundings_temperature_c",
+            )
         _temperature_k(self.initial_temperature_c, "initial_temperature_c")
         _temperature_k(
             self.resistance_reference_temperature_c,
@@ -184,6 +190,7 @@ class ThermalSimulation:
     temperature_c: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...]
+    radiative_surroundings_temperature_c: tuple[float, ...]
     heat_transfer_w_per_k: tuple[float, ...]
     resistance_ohm: tuple[float, ...]
     entropic_coefficient_v_per_k: tuple[float, ...]
@@ -248,6 +255,7 @@ class CurrentProfile:
     time_s: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...] | None
+    radiative_surroundings_temperature_c: tuple[float, ...] | None
     entropic_coefficient_v_per_k: tuple[float, ...] | None
     heat_transfer_w_per_k: tuple[float, ...] | None
     interval_duration_s: tuple[float, ...]
@@ -297,6 +305,7 @@ def _heat_rates(
     temperature_c: float,
     current_a: float,
     ambient_temperature_c: float,
+    radiative_surroundings_temperature_c: float,
     entropic_coefficient_v_per_k: float,
     heat_transfer_w_per_k: float,
 ) -> HeatRates:
@@ -313,7 +322,7 @@ def _heat_rates(
     )
     radiative_rejection_w = spec.radiative_heat_rejection_w(
         temperature_c,
-        ambient_temperature_c,
+        radiative_surroundings_temperature_c,
     )
     total_rejection_w = convective_rejection_w + radiative_rejection_w
     return HeatRates(
@@ -333,6 +342,7 @@ def _rk4_temperature_change_c(
     start_temperature_c: float,
     current_a: float,
     ambient_temperature_c: float,
+    radiative_surroundings_temperature_c: float,
     entropic_coefficient_v_per_k: float,
     heat_transfer_w_per_k: float,
     interval_duration_s: float,
@@ -349,6 +359,7 @@ def _rk4_temperature_change_c(
             value_c,
             current_a,
             ambient_temperature_c,
+            radiative_surroundings_temperature_c,
             entropic_coefficient_v_per_k,
             heat_transfer_w_per_k,
         )
@@ -376,6 +387,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
         optional_headers = [
             "duration_s",
             "ambient_temperature_c",
+            "radiative_surroundings_temperature_c",
             "entropic_coefficient_v_per_k",
             "heat_transfer_w_per_k",
         ]
@@ -390,9 +402,13 @@ def load_current_profile(path: Path) -> CurrentProfile:
             raise ValueError(
                 "profile CSV header must be exactly time_s,current_a followed by "
                 "any of duration_s,ambient_temperature_c,"
+                "radiative_surroundings_temperature_c,"
                 "entropic_coefficient_v_per_k,heat_transfer_w_per_k in that order"
             )
         has_ambient = "ambient_temperature_c" in fieldnames
+        has_radiative_surroundings = (
+            "radiative_surroundings_temperature_c" in fieldnames
+        )
         has_duration = "duration_s" in fieldnames
         has_entropic_coefficient = "entropic_coefficient_v_per_k" in fieldnames
         has_heat_transfer = "heat_transfer_w_per_k" in fieldnames
@@ -407,6 +423,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
     currents: list[float] = []
     durations: list[float] = []
     ambient_temperatures: list[float] = []
+    radiative_surroundings_temperatures: list[float] = []
     entropic_coefficients: list[float] = []
     heat_transfers: list[float] = []
     for line_number, row in enumerate(rows, start=2):
@@ -416,6 +433,11 @@ def load_current_profile(path: Path) -> CurrentProfile:
             duration_s = float(row["duration_s"]) if has_duration else None
             ambient_temperature_c = (
                 float(row["ambient_temperature_c"]) if has_ambient else None
+            )
+            radiative_surroundings_temperature_c = (
+                float(row["radiative_surroundings_temperature_c"])
+                if has_radiative_surroundings
+                else None
             )
             entropic_coefficient_v_per_k = (
                 float(row["entropic_coefficient_v_per_k"])
@@ -434,6 +456,8 @@ def load_current_profile(path: Path) -> CurrentProfile:
             values.append(duration_s)
         if ambient_temperature_c is not None:
             values.append(ambient_temperature_c)
+        if radiative_surroundings_temperature_c is not None:
+            values.append(radiative_surroundings_temperature_c)
         if entropic_coefficient_v_per_k is not None:
             values.append(entropic_coefficient_v_per_k)
         if heat_transfer_w_per_k is not None:
@@ -459,6 +483,15 @@ def load_current_profile(path: Path) -> CurrentProfile:
                 f"profile CSV line {line_number} ambient_temperature_c",
             )
             ambient_temperatures.append(ambient_temperature_c)
+        if radiative_surroundings_temperature_c is not None:
+            _temperature_k(
+                radiative_surroundings_temperature_c,
+                f"profile CSV line {line_number} "
+                "radiative_surroundings_temperature_c",
+            )
+            radiative_surroundings_temperatures.append(
+                radiative_surroundings_temperature_c
+            )
         if entropic_coefficient_v_per_k is not None:
             entropic_coefficients.append(entropic_coefficient_v_per_k)
         if heat_transfer_w_per_k is not None:
@@ -506,6 +539,11 @@ def load_current_profile(path: Path) -> CurrentProfile:
         time_s=tuple(times),
         current_a=tuple(currents),
         ambient_temperature_c=(tuple(ambient_temperatures) if has_ambient else None),
+        radiative_surroundings_temperature_c=(
+            tuple(radiative_surroundings_temperatures)
+            if has_radiative_surroundings
+            else None
+        ),
         entropic_coefficient_v_per_k=(
             tuple(entropic_coefficients) if has_entropic_coefficient else None
         ),
@@ -518,6 +556,7 @@ def simulate_lumped_temperature(
     currents_a: Sequence[float],
     spec: LumpedThermalSpec = LumpedThermalSpec(),
     ambient_temperatures_c: Sequence[float] | None = None,
+    radiative_surroundings_temperatures_c: Sequence[float] | None = None,
     interval_durations_s: Sequence[float] | None = None,
     entropic_coefficients_v_per_k: Sequence[float] | None = None,
     heat_transfers_w_per_k: Sequence[float] | None = None,
@@ -560,6 +599,33 @@ def simulate_lumped_temperature(
         for value in ambient_temperatures:
             _temperature_k(value, "ambient temperature values")
 
+    if radiative_surroundings_temperatures_c is None:
+        if spec.radiative_surroundings_temperature_c is None:
+            radiative_surroundings_temperatures = ambient_temperatures
+        else:
+            radiative_surroundings_temperatures = (
+                spec.radiative_surroundings_temperature_c,
+            ) * len(currents)
+    else:
+        radiative_surroundings_temperatures = tuple(
+            float(temperature)
+            for temperature in radiative_surroundings_temperatures_c
+        )
+        if len(radiative_surroundings_temperatures) != len(currents):
+            raise ValueError(
+                "radiative_surroundings_temperatures_c must contain one value "
+                "per current interval"
+            )
+        if any(
+            not math.isfinite(value)
+            for value in radiative_surroundings_temperatures
+        ):
+            raise ValueError(
+                "all radiative surroundings temperature values must be finite"
+            )
+        for value in radiative_surroundings_temperatures:
+            _temperature_k(value, "radiative surroundings temperature values")
+
     if entropic_coefficients_v_per_k is None:
         entropic_coefficients = (spec.entropic_coefficient_v_per_k,) * len(currents)
     else:
@@ -601,12 +667,14 @@ def simulate_lumped_temperature(
     for (
         current,
         ambient_temperature_c,
+        radiative_surroundings_temperature_c,
         interval_duration_s,
         entropic_coefficient_v_per_k,
         heat_transfer_w_per_k,
     ) in zip(
         currents,
         ambient_temperatures,
+        radiative_surroundings_temperatures,
         interval_durations,
         entropic_coefficients,
         heat_transfers,
@@ -618,6 +686,7 @@ def simulate_lumped_temperature(
             temperature,
             current,
             ambient_temperature_c,
+            radiative_surroundings_temperature_c,
             entropic_coefficient_v_per_k,
             heat_transfer_w_per_k,
         )
@@ -658,6 +727,7 @@ def simulate_lumped_temperature(
                 temperature,
                 current,
                 ambient_temperature_c,
+                radiative_surroundings_temperature_c,
                 entropic_coefficient_v_per_k,
                 heat_transfer_w_per_k,
                 interval_duration_s,
@@ -688,6 +758,9 @@ def simulate_lumped_temperature(
         temperature_c=tuple(temperatures),
         current_a=currents,
         ambient_temperature_c=ambient_temperatures,
+        radiative_surroundings_temperature_c=(
+            radiative_surroundings_temperatures
+        ),
         heat_transfer_w_per_k=heat_transfers,
         resistance_ohm=tuple(interval_resistance),
         entropic_coefficient_v_per_k=tuple(interval_entropic_coefficient),
@@ -717,6 +790,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "duration_s",
         "current_a",
         "ambient_temperature_c",
+        "radiative_surroundings_temperature_c",
         "heat_transfer_w_per_k",
         "emissivity",
         "radiating_area_m2",
@@ -744,6 +818,9 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "duration_s": result.interval_duration_s[index],
                 "current_a": current_a,
                 "ambient_temperature_c": result.ambient_temperature_c[index],
+                "radiative_surroundings_temperature_c": (
+                    result.radiative_surroundings_temperature_c[index]
+                ),
                 "heat_transfer_w_per_k": result.heat_transfer_w_per_k[index],
                 "emissivity": result.emissivity,
                 "radiating_area_m2": result.radiating_area_m2,
@@ -795,6 +872,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--emissivity", type=float, default=0.0)
     parser.add_argument("--radiating-area-m2", type=float, default=0.0)
     parser.add_argument("--ambient-temperature-c", type=float)
+    parser.add_argument("--radiative-surroundings-temperature-c", type=float)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
     parser.add_argument("--specific-heat-j-per-kg-k", type=float, default=1000.0)
@@ -810,6 +888,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     ambient_temperatures_c = None
+    radiative_surroundings_temperatures_c = None
     interval_durations_s = None
     entropic_coefficients_v_per_k = None
     heat_transfers_w_per_k = None
@@ -840,6 +919,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "profile that contains entropic_coefficient_v_per_k"
             )
         if (
+            profile.radiative_surroundings_temperature_c is not None
+            and args.radiative_surroundings_temperature_c is not None
+        ):
+            raise ValueError(
+                "--radiative-surroundings-temperature-c cannot be combined "
+                "with a profile that contains "
+                "radiative_surroundings_temperature_c"
+            )
+        if (
             profile.heat_transfer_w_per_k is not None
             and args.heat_transfer_w_per_k is not None
         ):
@@ -849,6 +937,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         currents = profile.current_a
         ambient_temperatures_c = profile.ambient_temperature_c
+        radiative_surroundings_temperatures_c = (
+            profile.radiative_surroundings_temperature_c
+        )
         interval_durations_s = profile.interval_duration_s
         entropic_coefficients_v_per_k = profile.entropic_coefficient_v_per_k
         heat_transfers_w_per_k = profile.heat_transfer_w_per_k
@@ -894,6 +985,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         emissivity=args.emissivity,
         radiating_area_m2=args.radiating_area_m2,
         ambient_temperature_c=ambient_temperature_c,
+        radiative_surroundings_temperature_c=(
+            args.radiative_surroundings_temperature_c
+        ),
         initial_temperature_c=args.initial_temperature_c,
         time_step_s=time_step_s,
         rk4_max_step_s=args.rk4_max_step_s,
@@ -903,6 +997,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         currents,
         spec,
         ambient_temperatures_c=ambient_temperatures_c,
+        radiative_surroundings_temperatures_c=(
+            radiative_surroundings_temperatures_c
+        ),
         interval_durations_s=interval_durations_s,
         entropic_coefficients_v_per_k=entropic_coefficients_v_per_k,
         heat_transfers_w_per_k=heat_transfers_w_per_k,
@@ -927,6 +1024,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{max(result.heat_transfer_w_per_k):.6g} W/K"
     )
     print(f"Radiation coefficient: {spec.radiation_coefficient_w_per_k4:.12g} W/K^4")
+    print(
+        "Radiative-surroundings temperature range: "
+        f"{min(result.radiative_surroundings_temperature_c):.6g} to "
+        f"{max(result.radiative_surroundings_temperature_c):.6g} degC"
+    )
     print(
         "Entropic coefficient range: "
         f"{min(result.entropic_coefficient_v_per_k):.6g} to "
