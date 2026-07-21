@@ -114,6 +114,22 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertAlmostEqual(result.temperature_c[-1], 35.0, places=12)
         self.assertAlmostEqual(result.interval_net_heat_j[0], 10_000.0, places=9)
 
+    def test_exact_linear_handles_entropy_cancelling_cooling_slope(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            resistance_ohm=0.01,
+            entropic_coefficient_v_per_k=-0.01,
+            heat_transfer_w_per_k=1.0,
+            ambient_temperature_c=25.0,
+            initial_temperature_c=25.0,
+            time_step_s=100.0,
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        result = simulate_lumped_temperature([100.0], spec)
+        self.assertAlmostEqual(result.temperature_c[-1], 64.815, places=12)
+        self.assertAlmostEqual(result.interval_net_heat_j[0], 39_815.0, places=9)
+
     def test_discrete_energy_balance_closes(self):
         profile = [80.0] * 300 + [0.0] * 300
         result = simulate_lumped_temperature(profile)
@@ -129,6 +145,89 @@ class LumpedCellThermalTests(unittest.TestCase):
                 for heat_w in result.heat_generation_w
             )
         )
+
+    def test_default_entropic_term_preserves_irreversible_only_behavior(self):
+        result = simulate_lumped_temperature([75.0, -75.0])
+        self.assertEqual(result.entropic_coefficient_v_per_k, (0.0, 0.0))
+        self.assertEqual(result.reversible_heat_w, (0.0, 0.0))
+        self.assertEqual(result.irreversible_heat_w, result.heat_generation_w)
+
+    def test_reversible_heat_changes_sign_with_current_direction(self):
+        spec = LumpedThermalSpec(
+            entropic_coefficient_v_per_k=0.0001,
+            heat_transfer_w_per_k=0.0,
+        )
+        discharge = simulate_lumped_temperature([100.0], spec)
+        charge = simulate_lumped_temperature([-100.0], spec)
+        expected_magnitude_w = 100.0 * (25.0 + 273.15) * 0.0001
+
+        self.assertAlmostEqual(
+            discharge.reversible_heat_w[0],
+            -expected_magnitude_w,
+            places=12,
+        )
+        self.assertAlmostEqual(
+            charge.reversible_heat_w[0],
+            expected_magnitude_w,
+            places=12,
+        )
+        self.assertEqual(discharge.irreversible_heat_w[0], 40.0)
+        self.assertAlmostEqual(
+            discharge.heat_generation_w[0],
+            40.0 - expected_magnitude_w,
+            places=12,
+        )
+        self.assertLess(discharge.temperature_c[-1], charge.temperature_c[-1])
+
+    def test_exact_linear_matches_combined_thermal_feedback_solution(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            resistance_ohm=0.01,
+            resistance_temperature_coefficient_per_k=0.01,
+            entropic_coefficient_v_per_k=0.0002,
+            heat_transfer_w_per_k=1.0,
+            ambient_temperature_c=20.0,
+            initial_temperature_c=30.0,
+            time_step_s=600.0,
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        current_a = 50.0
+        result = simulate_lumped_temperature([current_a], spec)
+        feedback_w_per_k = (
+            current_a**2
+            * spec.resistance_ohm
+            * spec.resistance_temperature_coefficient_per_k
+            - current_a * spec.entropic_coefficient_v_per_k
+            - spec.heat_transfer_w_per_k
+        )
+        start_net_heat_w = result.heat_generation_w[0] - result.heat_rejection_w[0]
+        expected_change_c = (
+            start_net_heat_w
+            * math.expm1(
+                feedback_w_per_k * spec.time_step_s / spec.thermal_capacity_j_per_k
+            )
+            / feedback_w_per_k
+        )
+        self.assertAlmostEqual(
+            result.temperature_c[-1],
+            spec.initial_temperature_c + expected_change_c,
+            places=12,
+        )
+        self.assertLess(result.energy_balance_error_j, 1e-9)
+
+    def test_interval_entropic_coefficients_override_constant_spec_value(self):
+        result = simulate_lumped_temperature(
+            [80.0, -80.0],
+            LumpedThermalSpec(entropic_coefficient_v_per_k=0.5),
+            entropic_coefficients_v_per_k=[0.0001, -0.0002],
+        )
+        self.assertEqual(
+            result.entropic_coefficient_v_per_k,
+            (0.0001, -0.0002),
+        )
+        self.assertLess(result.reversible_heat_w[0], 0.0)
+        self.assertLess(result.reversible_heat_w[1], 0.0)
 
     def test_temperature_feedback_matches_closed_form_discrete_solution(self):
         spec = LumpedThermalSpec(
@@ -219,6 +318,16 @@ class LumpedCellThermalTests(unittest.TestCase):
                 [10.0],
                 LumpedThermalSpec(integration_method="runge-kutta"),
             )
+        with self.assertRaisesRegex(ValueError, "entropic_coefficient.*finite"):
+            simulate_lumped_temperature(
+                [10.0],
+                LumpedThermalSpec(entropic_coefficient_v_per_k=math.nan),
+            )
+        with self.assertRaisesRegex(ValueError, "above absolute zero"):
+            simulate_lumped_temperature(
+                [10.0],
+                LumpedThermalSpec(initial_temperature_c=-273.15),
+            )
 
     def test_rejects_empty_or_nonfinite_current_profiles(self):
         with self.assertRaisesRegex(ValueError, "at least one interval"):
@@ -237,6 +346,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.time_s, (0.0, 60.0, 120.0))
         self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
         self.assertIsNone(profile.ambient_temperature_c)
+        self.assertIsNone(profile.entropic_coefficient_v_per_k)
         self.assertEqual(profile.time_step_s, 60.0)
         self.assertEqual(profile.interval_duration_s, (60.0, 60.0, 60.0))
 
@@ -268,6 +378,24 @@ class LumpedCellThermalTests(unittest.TestCase):
             profile = load_current_profile(path)
         self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
         self.assertEqual(profile.ambient_temperature_c, (25.0, 30.0, 35.0))
+
+    def test_loads_profile_with_interval_entropic_coefficients(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s,ambient_temperature_c,"
+                "entropic_coefficient_v_per_k\n"
+                "0,0,30,25,0.0001\n"
+                "30,75,90,30,-0.0002\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.interval_duration_s, (30.0, 90.0))
+        self.assertEqual(profile.ambient_temperature_c, (25.0, 30.0))
+        self.assertEqual(
+            profile.entropic_coefficient_v_per_k,
+            (0.0001, -0.0002),
+        )
 
     def test_interval_ambient_changes_heat_rejection_and_temperature(self):
         constant = simulate_lumped_temperature([0.0, 0.0])
@@ -322,6 +450,18 @@ class LumpedCellThermalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duration values must be positive"):
             simulate_lumped_temperature([10.0], interval_durations_s=[0.0])
 
+    def test_rejects_invalid_entropic_coefficient_profile(self):
+        with self.assertRaisesRegex(ValueError, "one value per current interval"):
+            simulate_lumped_temperature(
+                [10.0, 20.0],
+                entropic_coefficients_v_per_k=[0.0001],
+            )
+        with self.assertRaisesRegex(ValueError, "coefficient values must be finite"):
+            simulate_lumped_temperature(
+                [10.0],
+                entropic_coefficients_v_per_k=[math.nan],
+            )
+
     def test_rejects_invalid_csv_header_and_time_grid(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "profile.csv"
@@ -363,6 +503,12 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(float(rows[0]["duration_s"]), 1.0)
         self.assertEqual(float(rows[0]["ambient_temperature_c"]), 25.0)
         self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
+        self.assertEqual(float(rows[0]["entropic_coefficient_v_per_k"]), 0.0)
+        self.assertEqual(float(rows[0]["reversible_heat_w"]), 0.0)
+        self.assertEqual(
+            float(rows[0]["irreversible_heat_w"]),
+            float(rows[0]["heat_generation_w"]),
+        )
         self.assertAlmostEqual(
             sum(float(row["net_heat_j"]) for row in rows),
             result.integrated_net_heat_j,
@@ -473,6 +619,63 @@ class LumpedCellThermalTests(unittest.TestCase):
         )
         self.assertGreater(upper_resistance, 0.004)
 
+    def test_cli_applies_constant_entropic_coefficient(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a",
+                    "100",
+                    "--duration-s",
+                    "1",
+                    "--entropic-coefficient-v-per-k",
+                    "0.0001",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        output = standard_output.getvalue()
+        self.assertIn("Entropic coefficient range: 0.0001 to 0.0001 V/K", output)
+        self.assertIn("Reversible heat range: -2.981500 to -2.981500 W", output)
+
+    def test_cli_runs_entropic_profile_and_exports_heat_components(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a,duration_s,entropic_coefficient_v_per_k\n"
+                "0,80,60,0.0001\n"
+                "60,-80,60,0.0001\n",
+                encoding="utf-8",
+            )
+            standard_output = io.StringIO()
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--output-csv",
+                        str(output_path),
+                        "--integration-method",
+                        "exact-linear",
+                    ]
+                )
+            with output_path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "Entropic coefficient range: 0.0001 to 0.0001 V/K",
+            standard_output.getvalue(),
+        )
+        self.assertIn("Reversible heat range: -", standard_output.getvalue())
+        self.assertLess(float(rows[0]["reversible_heat_w"]), 0.0)
+        self.assertGreater(float(rows[1]["reversible_heat_w"]), 0.0)
+        for row in rows:
+            self.assertAlmostEqual(
+                float(row["heat_generation_w"]),
+                float(row["irreversible_heat_w"]) + float(row["reversible_heat_w"]),
+                places=9,
+            )
+
     def test_cli_reports_exact_linear_integration(self):
         standard_output = io.StringIO()
         with contextlib.redirect_stdout(standard_output):
@@ -545,6 +748,24 @@ class LumpedCellThermalTests(unittest.TestCase):
                         str(profile_path),
                         "--ambient-temperature-c",
                         "20",
+                    ]
+                )
+
+    def test_profile_entropic_coefficient_rejects_constant_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            profile_path.write_text(
+                "time_s,current_a,entropic_coefficient_v_per_k\n"
+                "0,0,0.0001\n1,10,0.0001\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cannot be combined"):
+                main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--entropic-coefficient-v-per-k",
+                        "0.0002",
                     ]
                 )
 
