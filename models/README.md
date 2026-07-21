@@ -324,6 +324,31 @@ documented before engineering use. A negative source can remove more heat than
 the electrical terms generate, but it does not enforce coolant, surface, or
 absolute-temperature constraints beyond the model's existing validation.
 
+## Temperature-Limit Exposure
+
+Assess one or more project-defined temperature limits after a simulation and
+write one summary row per limit:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --current-a 75 --duration-s 600 `
+  --temperature-limit-c 30 `
+  --temperature-limit-c 35 `
+  --limit-report-csv results/temperature-limits.csv
+```
+
+Each assessment reports whether the limit was exceeded, the first crossing
+time, total time above the limit, exposure fraction, peak temperature, and
+signed margin from the peak to the limit. A negative margin means the simulated
+peak exceeded the limit. The limit itself is not counted as an exceedance.
+
+Crossing times and exposure duration use piecewise-linear interpolation between
+the reported temperature states. This makes the calculation deterministic for
+uniform and variable-duration profiles, but it does not reconstruct motion
+inside an integration interval. Use a reviewed time-step sensitivity study when
+a short excursion or precise threshold timing matters. Temperature limits are
+project inputs, not safety recommendations from this educational model.
+
 ## Explicit Limitations
 
 - Resistance may use an optional linear temperature coefficient, but it does
@@ -345,6 +370,8 @@ absolute-temperature constraints beyond the model's existing validation.
   constant current, ambient temperature, coefficients, and heat transfer over
   each interval. Explicit durations may vary, but the model does not interpolate
   within an interval.
+- Temperature-limit exposure is linearly interpolated between reported states;
+  an unreported within-step excursion can be missed.
 - Exact integration applies only to the model's linear within-interval
   equation. Surface radiation uses bounded-step RK4; nonlinear resistance
   maps would require a separately validated extension.

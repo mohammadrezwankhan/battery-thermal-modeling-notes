@@ -185,6 +185,19 @@ class LumpedThermalSpec:
 
 
 @dataclass(frozen=True)
+class TemperatureLimitAssessment:
+    """Piecewise-linear exposure metrics for one temperature limit."""
+
+    limit_temperature_c: float
+    exceeded: bool
+    first_exceedance_time_s: float | None
+    time_above_limit_s: float
+    exposure_fraction: float
+    peak_temperature_c: float
+    margin_to_limit_c: float
+
+
+@dataclass(frozen=True)
 class ThermalSimulation:
     """Discrete temperatures and interval-level heat flows."""
 
@@ -232,6 +245,58 @@ class ThermalSimulation:
     @property
     def duration_s(self) -> float:
         return sum(self.interval_duration_s)
+
+    def assess_temperature_limit(
+        self,
+        limit_temperature_c: float,
+    ) -> TemperatureLimitAssessment:
+        """Assess time above a limit by interpolating between result states."""
+
+        _temperature_k(limit_temperature_c, "limit_temperature_c")
+        first_exceedance_time_s: float | None = None
+        time_above_limit_s = 0.0
+        if self.temperature_c[0] > limit_temperature_c:
+            first_exceedance_time_s = self.time_s[0]
+
+        for start_time_s, end_time_s, start_c, end_c in zip(
+            self.time_s[:-1],
+            self.time_s[1:],
+            self.temperature_c[:-1],
+            self.temperature_c[1:],
+            strict=True,
+        ):
+            duration_s = end_time_s - start_time_s
+            start_above = start_c > limit_temperature_c
+            end_above = end_c > limit_temperature_c
+            if start_above and end_above:
+                time_above_limit_s += duration_s
+                if first_exceedance_time_s is None:
+                    first_exceedance_time_s = start_time_s
+                continue
+            if not start_above and not end_above:
+                continue
+
+            crossing_fraction = (limit_temperature_c - start_c) / (end_c - start_c)
+            crossing_time_s = start_time_s + crossing_fraction * duration_s
+            if end_above:
+                time_above_limit_s += end_time_s - crossing_time_s
+                if first_exceedance_time_s is None:
+                    first_exceedance_time_s = crossing_time_s
+            else:
+                time_above_limit_s += crossing_time_s - start_time_s
+                if first_exceedance_time_s is None:
+                    first_exceedance_time_s = start_time_s
+
+        peak_temperature_c = self.peak_temperature_c
+        return TemperatureLimitAssessment(
+            limit_temperature_c=limit_temperature_c,
+            exceeded=first_exceedance_time_s is not None,
+            first_exceedance_time_s=first_exceedance_time_s,
+            time_above_limit_s=time_above_limit_s,
+            exposure_fraction=time_above_limit_s / self.duration_s,
+            peak_temperature_c=peak_temperature_c,
+            margin_to_limit_c=limit_temperature_c - peak_temperature_c,
+        )
 
     @property
     def time_step_s(self) -> float | None:
@@ -887,12 +952,68 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
             )
 
 
+def write_temperature_limit_csv(
+    path: Path,
+    assessments: Sequence[TemperatureLimitAssessment],
+) -> None:
+    """Write one auditable summary row per assessed temperature limit."""
+
+    if not assessments:
+        raise ValueError("assessments must contain at least one temperature limit")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "limit_temperature_c",
+        "exceeded",
+        "first_exceedance_time_s",
+        "time_above_limit_s",
+        "exposure_fraction",
+        "peak_temperature_c",
+        "margin_to_limit_c",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for assessment in assessments:
+            writer.writerow(
+                {
+                    "limit_temperature_c": format(
+                        assessment.limit_temperature_c, ".12g"
+                    ),
+                    "exceeded": str(assessment.exceeded).lower(),
+                    "first_exceedance_time_s": (
+                        ""
+                        if assessment.first_exceedance_time_s is None
+                        else format(assessment.first_exceedance_time_s, ".12g")
+                    ),
+                    "time_above_limit_s": format(
+                        assessment.time_above_limit_s, ".12g"
+                    ),
+                    "exposure_fraction": format(
+                        assessment.exposure_fraction, ".12g"
+                    ),
+                    "peak_temperature_c": format(
+                        assessment.peak_temperature_c, ".12g"
+                    ),
+                    "margin_to_limit_c": format(
+                        assessment.margin_to_limit_c, ".12g"
+                    ),
+                }
+            )
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run a constant-current or CSV-profile cell thermal calculation."
     )
     parser.add_argument("--profile-csv", type=Path)
     parser.add_argument("--output-csv", type=Path)
+    parser.add_argument(
+        "--temperature-limit-c",
+        action="append",
+        type=float,
+        dest="temperature_limits_c",
+    )
+    parser.add_argument("--limit-report-csv", type=Path)
     parser.add_argument("--current-a", type=float)
     parser.add_argument("--duration-s", type=float)
     parser.add_argument("--time-step-s", type=float)
@@ -928,6 +1049,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    temperature_limits_c = tuple(args.temperature_limits_c or ())
+    if args.limit_report_csv and not temperature_limits_c:
+        raise ValueError(
+            "--limit-report-csv requires at least one --temperature-limit-c"
+        )
+    if len(set(temperature_limits_c)) != len(temperature_limits_c):
+        raise ValueError("--temperature-limit-c values must be unique")
+    for limit_temperature_c in temperature_limits_c:
+        _temperature_k(limit_temperature_c, "temperature limit")
+
     ambient_temperatures_c = None
     radiative_surroundings_temperatures_c = None
     interval_durations_s = None
@@ -1057,6 +1188,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.output_csv:
         write_simulation_csv(args.output_csv, result)
+    limit_assessments = tuple(
+        result.assess_temperature_limit(limit_temperature_c)
+        for limit_temperature_c in temperature_limits_c
+    )
+    if args.limit_report_csv:
+        write_temperature_limit_csv(args.limit_report_csv, limit_assessments)
 
     print(f"Intervals: {len(currents)}")
     print(f"Duration: {result.duration_s:.3f} s")
@@ -1114,8 +1251,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Stored thermal energy: {result.stored_energy_change_j:.3f} J")
     print(f"Integrated net heat: {result.integrated_net_heat_j:.3f} J")
     print(f"Energy-balance error: {result.energy_balance_error_j:.6e} J")
+    for assessment in limit_assessments:
+        status = "EXCEEDED" if assessment.exceeded else "PASS"
+        first_exceedance = (
+            "not exceeded"
+            if assessment.first_exceedance_time_s is None
+            else f"{assessment.first_exceedance_time_s:.6g} s"
+        )
+        print(
+            f"Temperature limit {assessment.limit_temperature_c:.6g} degC: "
+            f"{status}"
+        )
+        print(f"  First exceedance: {first_exceedance}")
+        print(
+            "  Exposure: "
+            f"{assessment.time_above_limit_s:.6g} s "
+            f"({assessment.exposure_fraction:.6%})"
+        )
+        print(f"  Margin to limit: {assessment.margin_to_limit_c:.6g} degC")
     if args.output_csv:
         print(f"Interval results: {args.output_csv}")
+    if args.limit_report_csv:
+        print(f"Temperature-limit report: {args.limit_report_csv}")
     return 0
 
 
