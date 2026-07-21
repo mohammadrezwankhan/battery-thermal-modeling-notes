@@ -128,6 +128,7 @@ class ThermalSimulation:
     temperature_c: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...]
+    heat_transfer_w_per_k: tuple[float, ...]
     resistance_ohm: tuple[float, ...]
     entropic_coefficient_v_per_k: tuple[float, ...]
     irreversible_heat_w: tuple[float, ...]
@@ -181,12 +182,13 @@ class ThermalSimulation:
 
 @dataclass(frozen=True)
 class CurrentProfile:
-    """Interval starts, durations, current, ambient, and entropic coefficients."""
+    """Piecewise-constant electrical and thermal boundary conditions."""
 
     time_s: tuple[float, ...]
     current_a: tuple[float, ...]
     ambient_temperature_c: tuple[float, ...] | None
     entropic_coefficient_v_per_k: tuple[float, ...] | None
+    heat_transfer_w_per_k: tuple[float, ...] | None
     interval_duration_s: tuple[float, ...]
 
     @property
@@ -216,7 +218,7 @@ def _temperature_k(temperature_c: float, context: str) -> float:
 
 
 def load_current_profile(path: Path) -> CurrentProfile:
-    """Load current, duration, ambient, and entropic-coefficient intervals."""
+    """Load piecewise-constant electrical and thermal profile intervals."""
 
     with path.open("r", encoding="utf-8", newline="") as profile_file:
         reader = csv.DictReader(profile_file)
@@ -225,6 +227,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
             "duration_s",
             "ambient_temperature_c",
             "entropic_coefficient_v_per_k",
+            "heat_transfer_w_per_k",
         ]
         fieldnames = reader.fieldnames or []
         selected_optional_headers = [
@@ -237,11 +240,12 @@ def load_current_profile(path: Path) -> CurrentProfile:
             raise ValueError(
                 "profile CSV header must be exactly time_s,current_a followed by "
                 "any of duration_s,ambient_temperature_c,"
-                "entropic_coefficient_v_per_k in that order"
+                "entropic_coefficient_v_per_k,heat_transfer_w_per_k in that order"
             )
         has_ambient = "ambient_temperature_c" in fieldnames
         has_duration = "duration_s" in fieldnames
         has_entropic_coefficient = "entropic_coefficient_v_per_k" in fieldnames
+        has_heat_transfer = "heat_transfer_w_per_k" in fieldnames
         rows = list(reader)
 
     if not rows:
@@ -254,6 +258,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
     durations: list[float] = []
     ambient_temperatures: list[float] = []
     entropic_coefficients: list[float] = []
+    heat_transfers: list[float] = []
     for line_number, row in enumerate(rows, start=2):
         try:
             time_s = float(row["time_s"])
@@ -267,6 +272,9 @@ def load_current_profile(path: Path) -> CurrentProfile:
                 if has_entropic_coefficient
                 else None
             )
+            heat_transfer_w_per_k = (
+                float(row["heat_transfer_w_per_k"]) if has_heat_transfer else None
+            )
         except (TypeError, ValueError) as error:
             raise ValueError(
                 f"profile CSV line {line_number} must contain numeric values"
@@ -278,11 +286,18 @@ def load_current_profile(path: Path) -> CurrentProfile:
             values.append(ambient_temperature_c)
         if entropic_coefficient_v_per_k is not None:
             values.append(entropic_coefficient_v_per_k)
+        if heat_transfer_w_per_k is not None:
+            values.append(heat_transfer_w_per_k)
         if None in row or any(not math.isfinite(value) for value in values):
             raise ValueError(f"profile CSV line {line_number} must be finite")
         if duration_s is not None and duration_s <= 0.0:
             raise ValueError(
                 f"profile CSV line {line_number} duration_s must be positive"
+            )
+        if heat_transfer_w_per_k is not None and heat_transfer_w_per_k < 0.0:
+            raise ValueError(
+                f"profile CSV line {line_number} heat_transfer_w_per_k "
+                "must be nonnegative"
             )
         times.append(time_s)
         currents.append(current_a)
@@ -296,6 +311,8 @@ def load_current_profile(path: Path) -> CurrentProfile:
             ambient_temperatures.append(ambient_temperature_c)
         if entropic_coefficient_v_per_k is not None:
             entropic_coefficients.append(entropic_coefficient_v_per_k)
+        if heat_transfer_w_per_k is not None:
+            heat_transfers.append(heat_transfer_w_per_k)
 
     if not math.isclose(times[0], 0.0, rel_tol=0.0, abs_tol=1e-12):
         raise ValueError("profile CSV time_s must start at zero")
@@ -342,6 +359,7 @@ def load_current_profile(path: Path) -> CurrentProfile:
         entropic_coefficient_v_per_k=(
             tuple(entropic_coefficients) if has_entropic_coefficient else None
         ),
+        heat_transfer_w_per_k=(tuple(heat_transfers) if has_heat_transfer else None),
         interval_duration_s=tuple(durations),
     )
 
@@ -352,6 +370,7 @@ def simulate_lumped_temperature(
     ambient_temperatures_c: Sequence[float] | None = None,
     interval_durations_s: Sequence[float] | None = None,
     entropic_coefficients_v_per_k: Sequence[float] | None = None,
+    heat_transfers_w_per_k: Sequence[float] | None = None,
 ) -> ThermalSimulation:
     """Integrate a one-node thermal balance over piecewise-constant intervals."""
 
@@ -405,6 +424,19 @@ def simulate_lumped_temperature(
         if any(not math.isfinite(value) for value in entropic_coefficients):
             raise ValueError("all entropic coefficient values must be finite")
 
+    if heat_transfers_w_per_k is None:
+        heat_transfers = (spec.heat_transfer_w_per_k,) * len(currents)
+    else:
+        heat_transfers = tuple(float(value) for value in heat_transfers_w_per_k)
+        if len(heat_transfers) != len(currents):
+            raise ValueError(
+                "heat_transfers_w_per_k must contain one value per current interval"
+            )
+        if any(not math.isfinite(value) for value in heat_transfers):
+            raise ValueError("all heat transfer values must be finite")
+        if any(value < 0.0 for value in heat_transfers):
+            raise ValueError("all heat transfer values must be nonnegative")
+
     temperatures = [spec.initial_temperature_c]
     irreversible_heat: list[float] = []
     reversible_heat: list[float] = []
@@ -419,11 +451,13 @@ def simulate_lumped_temperature(
         ambient_temperature_c,
         interval_duration_s,
         entropic_coefficient_v_per_k,
+        heat_transfer_w_per_k,
     ) in zip(
         currents,
         ambient_temperatures,
         interval_durations,
         entropic_coefficients,
+        heat_transfers,
         strict=True,
     ):
         temperature = temperatures[-1]
@@ -435,7 +469,7 @@ def simulate_lumped_temperature(
             entropic_coefficient_v_per_k,
         )
         generation_w = irreversible_w + reversible_w
-        rejection_w = spec.heat_transfer_w_per_k * (temperature - ambient_temperature_c)
+        rejection_w = heat_transfer_w_per_k * (temperature - ambient_temperature_c)
         net_heat_w = generation_w - rejection_w
         if integration_method is IntegrationMethod.EXPLICIT_EULER:
             temperature_change_c = (
@@ -448,7 +482,7 @@ def simulate_lumped_temperature(
                 * spec.resistance_ohm
                 * spec.resistance_temperature_coefficient_per_k
                 - current * entropic_coefficient_v_per_k
-                - spec.heat_transfer_w_per_k
+                - heat_transfer_w_per_k
             )
             if thermal_feedback_w_per_k == 0.0:
                 temperature_change_c = (
@@ -492,6 +526,7 @@ def simulate_lumped_temperature(
         temperature_c=tuple(temperatures),
         current_a=currents,
         ambient_temperature_c=ambient_temperatures,
+        heat_transfer_w_per_k=heat_transfers,
         resistance_ohm=tuple(interval_resistance),
         entropic_coefficient_v_per_k=tuple(interval_entropic_coefficient),
         irreversible_heat_w=tuple(irreversible_heat),
@@ -515,6 +550,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
         "duration_s",
         "current_a",
         "ambient_temperature_c",
+        "heat_transfer_w_per_k",
         "resistance_ohm",
         "entropic_coefficient_v_per_k",
         "start_temperature_c",
@@ -537,6 +573,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "duration_s": result.interval_duration_s[index],
                 "current_a": current_a,
                 "ambient_temperature_c": result.ambient_temperature_c[index],
+                "heat_transfer_w_per_k": result.heat_transfer_w_per_k[index],
                 "resistance_ohm": result.resistance_ohm[index],
                 "entropic_coefficient_v_per_k": (
                     result.entropic_coefficient_v_per_k[index]
@@ -575,7 +612,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=25.0,
     )
     parser.add_argument("--entropic-coefficient-v-per-k", type=float)
-    parser.add_argument("--heat-transfer-w-per-k", type=float, default=1.2)
+    parser.add_argument("--heat-transfer-w-per-k", type=float)
     parser.add_argument("--ambient-temperature-c", type=float)
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
@@ -593,6 +630,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ambient_temperatures_c = None
     interval_durations_s = None
     entropic_coefficients_v_per_k = None
+    heat_transfers_w_per_k = None
     if args.profile_csv:
         conflicting = [
             name
@@ -619,10 +657,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "--entropic-coefficient-v-per-k cannot be combined with a "
                 "profile that contains entropic_coefficient_v_per_k"
             )
+        if (
+            profile.heat_transfer_w_per_k is not None
+            and args.heat_transfer_w_per_k is not None
+        ):
+            raise ValueError(
+                "--heat-transfer-w-per-k cannot be combined with a profile "
+                "that contains heat_transfer_w_per_k"
+            )
         currents = profile.current_a
         ambient_temperatures_c = profile.ambient_temperature_c
         interval_durations_s = profile.interval_duration_s
         entropic_coefficients_v_per_k = profile.entropic_coefficient_v_per_k
+        heat_transfers_w_per_k = profile.heat_transfer_w_per_k
         time_step_s = profile.time_step_s or profile.interval_duration_s[0]
     else:
         current_a = 75.0 if args.current_a is None else args.current_a
@@ -659,7 +706,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.entropic_coefficient_v_per_k is None
             else args.entropic_coefficient_v_per_k
         ),
-        heat_transfer_w_per_k=args.heat_transfer_w_per_k,
+        heat_transfer_w_per_k=(
+            1.2 if args.heat_transfer_w_per_k is None else args.heat_transfer_w_per_k
+        ),
         ambient_temperature_c=ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
         time_step_s=time_step_s,
@@ -671,6 +720,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ambient_temperatures_c=ambient_temperatures_c,
         interval_durations_s=interval_durations_s,
         entropic_coefficients_v_per_k=entropic_coefficients_v_per_k,
+        heat_transfers_w_per_k=heat_transfers_w_per_k,
     )
 
     if args.output_csv:
@@ -685,6 +735,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "Resistance range: "
         f"{min(result.resistance_ohm):.6f} to "
         f"{max(result.resistance_ohm):.6f} ohm"
+    )
+    print(
+        "Heat-transfer range: "
+        f"{min(result.heat_transfer_w_per_k):.6g} to "
+        f"{max(result.heat_transfer_w_per_k):.6g} W/K"
     )
     print(
         "Entropic coefficient range: "
