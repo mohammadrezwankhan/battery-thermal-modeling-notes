@@ -229,6 +229,30 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertLess(result.reversible_heat_w[0], 0.0)
         self.assertLess(result.reversible_heat_w[1], 0.0)
 
+    def test_interval_heat_transfer_drives_exact_cooling_solution(self):
+        spec = LumpedThermalSpec(
+            mass_kg=1.0,
+            specific_heat_j_per_kg_k=1000.0,
+            heat_transfer_w_per_k=0.5,
+            ambient_temperature_c=20.0,
+            initial_temperature_c=40.0,
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        result = simulate_lumped_temperature(
+            [0.0],
+            spec,
+            interval_durations_s=[300.0],
+            heat_transfers_w_per_k=[4.0],
+        )
+        expected_temperature_c = 20.0 + 20.0 * math.exp(-4.0 * 300.0 / 1000.0)
+        self.assertEqual(result.heat_transfer_w_per_k, (4.0,))
+        self.assertAlmostEqual(
+            result.temperature_c[-1],
+            expected_temperature_c,
+            places=12,
+        )
+        self.assertLess(result.energy_balance_error_j, 1e-9)
+
     def test_temperature_feedback_matches_closed_form_discrete_solution(self):
         spec = LumpedThermalSpec(
             mass_kg=1.0,
@@ -397,6 +421,21 @@ class LumpedCellThermalTests(unittest.TestCase):
             (0.0001, -0.0002),
         )
 
+    def test_loads_profile_with_interval_heat_transfer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s,ambient_temperature_c,"
+                "heat_transfer_w_per_k\n"
+                "0,100,300,35,0.6\n"
+                "300,100,300,35,4.0\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.interval_duration_s, (300.0, 300.0))
+        self.assertEqual(profile.ambient_temperature_c, (35.0, 35.0))
+        self.assertEqual(profile.heat_transfer_w_per_k, (0.6, 4.0))
+
     def test_interval_ambient_changes_heat_rejection_and_temperature(self):
         constant = simulate_lumped_temperature([0.0, 0.0])
         warming = simulate_lumped_temperature(
@@ -462,6 +501,32 @@ class LumpedCellThermalTests(unittest.TestCase):
                 entropic_coefficients_v_per_k=[math.nan],
             )
 
+    def test_rejects_invalid_heat_transfer_profile(self):
+        with self.assertRaisesRegex(ValueError, "one value per current interval"):
+            simulate_lumped_temperature(
+                [10.0, 20.0],
+                heat_transfers_w_per_k=[1.0],
+            )
+        with self.assertRaisesRegex(ValueError, "transfer values must be finite"):
+            simulate_lumped_temperature(
+                [10.0],
+                heat_transfers_w_per_k=[math.nan],
+            )
+        with self.assertRaisesRegex(ValueError, "must be nonnegative"):
+            simulate_lumped_temperature(
+                [10.0],
+                heat_transfers_w_per_k=[-0.1],
+            )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,heat_transfer_w_per_k\n0,0,-0.1\n1,0,1.0\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "must be nonnegative"):
+                load_current_profile(path)
+
     def test_rejects_invalid_csv_header_and_time_grid(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "profile.csv"
@@ -502,6 +567,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(float(rows[0]["current_a"]), 50.0)
         self.assertEqual(float(rows[0]["duration_s"]), 1.0)
         self.assertEqual(float(rows[0]["ambient_temperature_c"]), 25.0)
+        self.assertEqual(float(rows[0]["heat_transfer_w_per_k"]), 1.2)
         self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
         self.assertEqual(float(rows[0]["entropic_coefficient_v_per_k"]), 0.0)
         self.assertEqual(float(rows[0]["reversible_heat_w"]), 0.0)
@@ -676,6 +742,43 @@ class LumpedCellThermalTests(unittest.TestCase):
                 places=9,
             )
 
+    def test_cli_runs_variable_cooling_profile_and_exports_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a,duration_s,ambient_temperature_c,"
+                "heat_transfer_w_per_k\n"
+                "0,100,300,35,0.6\n"
+                "300,100,300,35,4.0\n"
+                "600,0,300,25,6.0\n",
+                encoding="utf-8",
+            )
+            standard_output = io.StringIO()
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--output-csv",
+                        str(output_path),
+                        "--integration-method",
+                        "exact-linear",
+                    ]
+                )
+            with output_path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "Heat-transfer range: 0.6 to 6 W/K",
+            standard_output.getvalue(),
+        )
+        self.assertEqual(
+            [float(row["heat_transfer_w_per_k"]) for row in rows],
+            [0.6, 4.0, 6.0],
+        )
+        self.assertLess(float(rows[-1]["end_temperature_c"]), 35.0)
+
     def test_cli_reports_exact_linear_integration(self):
         standard_output = io.StringIO()
         with contextlib.redirect_stdout(standard_output):
@@ -768,6 +871,52 @@ class LumpedCellThermalTests(unittest.TestCase):
                         "0.0002",
                     ]
                 )
+
+    def test_profile_heat_transfer_rejects_constant_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            profile_path.write_text(
+                "time_s,current_a,heat_transfer_w_per_k\n0,0,1.0\n1,10,2.0\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cannot be combined"):
+                main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--heat-transfer-w-per-k",
+                        "3.0",
+                    ]
+                )
+
+    def test_profile_without_heat_transfer_uses_constant_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a\n0,0\n1,10\n",
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "--profile-csv",
+                            str(profile_path),
+                            "--heat-transfer-w-per-k",
+                            "3.0",
+                            "--output-csv",
+                            str(output_path),
+                        ]
+                    ),
+                    0,
+                )
+            with output_path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(
+            [float(row["heat_transfer_w_per_k"]) for row in rows],
+            [3.0, 3.0],
+        )
 
 
 if __name__ == "__main__":
