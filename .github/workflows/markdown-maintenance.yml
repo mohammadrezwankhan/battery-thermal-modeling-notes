@@ -49,6 +49,16 @@ jobs:
           --integration-method exact-linear
           --output-csv "$RUNNER_TEMP/variable-cooling-intervals.csv"
 
+      - name: Run nonlinear radiation example
+        run: >-
+          python models/lumped_cell_thermal.py
+          --profile-csv models/data/radiative_cooling_profile.csv
+          --emissivity 0.85
+          --radiating-area-m2 0.03
+          --integration-method rk4
+          --rk4-max-step-s 0.5
+          --output-csv "$RUNNER_TEMP/radiative-cooling-intervals.csv"
+
       - name: Check Markdown links
         uses: lycheeverse/lychee-action@v2
         with:

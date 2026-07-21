@@ -11,6 +11,7 @@ from pathlib import Path
 from models.lumped_cell_thermal import (
     IntegrationMethod,
     LumpedThermalSpec,
+    STEFAN_BOLTZMANN_W_PER_M2_K4,
     load_current_profile,
     main,
     simulate_lumped_temperature,
@@ -917,6 +918,217 @@ class LumpedCellThermalTests(unittest.TestCase):
             [float(row["heat_transfer_w_per_k"]) for row in rows],
             [3.0, 3.0],
         )
+
+    def test_radiative_heat_uses_stefan_boltzmann_balance(self):
+        spec = LumpedThermalSpec(emissivity=0.82, radiating_area_m2=0.031)
+        expected_coefficient = 0.82 * 0.031 * 5.670374419e-8
+        expected_rejection_w = expected_coefficient * (
+            (60.0 + 273.15) ** 4 - (25.0 + 273.15) ** 4
+        )
+
+        self.assertEqual(STEFAN_BOLTZMANN_W_PER_M2_K4, 5.670374419e-8)
+        self.assertAlmostEqual(
+            spec.radiation_coefficient_w_per_k4,
+            expected_coefficient,
+            places=22,
+        )
+        self.assertAlmostEqual(
+            spec.radiative_heat_rejection_w(60.0, 25.0),
+            expected_rejection_w,
+            places=12,
+        )
+        self.assertLess(spec.radiative_heat_rejection_w(10.0, 25.0), 0.0)
+
+    def test_default_radiation_is_exactly_disabled(self):
+        result = simulate_lumped_temperature([75.0] * 10)
+
+        self.assertEqual(result.emissivity, 0.0)
+        self.assertEqual(result.radiating_area_m2, 0.0)
+        self.assertTrue(
+            all(value == 0.0 for value in result.radiative_heat_rejection_w)
+        )
+        self.assertEqual(
+            result.heat_rejection_w,
+            result.convective_heat_rejection_w,
+        )
+
+    def test_exact_linear_rejects_nonlinear_radiation(self):
+        with self.assertRaisesRegex(ValueError, "does not support nonlinear radiation"):
+            simulate_lumped_temperature(
+                [100.0],
+                LumpedThermalSpec(
+                    emissivity=0.85,
+                    radiating_area_m2=0.03,
+                    integration_method=IntegrationMethod.EXACT_LINEAR,
+                ),
+            )
+
+        with self.assertRaisesRegex(ValueError, "requires rk4"):
+            simulate_lumped_temperature(
+                [100.0],
+                LumpedThermalSpec(
+                    emissivity=0.85,
+                    radiating_area_m2=0.03,
+                    integration_method=IntegrationMethod.EXPLICIT_EULER,
+                ),
+            )
+
+    def test_rejects_invalid_radiation_and_rk4_parameters(self):
+        cases = [
+            (LumpedThermalSpec(emissivity=-0.1), "between zero and one"),
+            (LumpedThermalSpec(emissivity=1.1), "between zero and one"),
+            (LumpedThermalSpec(radiating_area_m2=-0.01), "must be nonnegative"),
+            (
+                LumpedThermalSpec(emissivity=0.8, radiating_area_m2=0.0),
+                "both be zero or both positive",
+            ),
+            (
+                LumpedThermalSpec(emissivity=0.0, radiating_area_m2=0.03),
+                "both be zero or both positive",
+            ),
+            (LumpedThermalSpec(rk4_max_step_s=0.0), "must be positive"),
+        ]
+        for spec, message in cases:
+            with self.subTest(spec=spec):
+                with self.assertRaisesRegex(ValueError, message):
+                    spec.validate()
+
+    def test_rk4_matches_exact_linear_when_radiation_is_disabled(self):
+        common = {
+            "time_step_s": 600.0,
+            "resistance_temperature_coefficient_per_k": 0.01,
+            "entropic_coefficient_v_per_k": 0.0001,
+            "heat_transfer_w_per_k": 1.5,
+        }
+        exact = simulate_lumped_temperature(
+            [100.0],
+            LumpedThermalSpec(
+                **common,
+                integration_method=IntegrationMethod.EXACT_LINEAR,
+            ),
+        )
+        rk4 = simulate_lumped_temperature(
+            [100.0],
+            LumpedThermalSpec(
+                **common,
+                integration_method=IntegrationMethod.RK4,
+                rk4_max_step_s=2.0,
+            ),
+        )
+
+        self.assertAlmostEqual(
+            rk4.temperature_c[-1], exact.temperature_c[-1], places=11
+        )
+        self.assertLess(rk4.energy_balance_error_j, 1e-9)
+
+    def test_radiation_reduces_rk4_temperature_and_closes_energy_balance(self):
+        intervals = [120.0] * 6
+        common = {
+            "time_step_s": 300.0,
+            "heat_transfer_w_per_k": 0.8,
+            "integration_method": IntegrationMethod.RK4,
+            "rk4_max_step_s": 1.0,
+        }
+        convection_only = simulate_lumped_temperature(
+            intervals,
+            LumpedThermalSpec(**common),
+        )
+        with_radiation = simulate_lumped_temperature(
+            intervals,
+            LumpedThermalSpec(
+                **common,
+                emissivity=0.85,
+                radiating_area_m2=0.03,
+            ),
+        )
+
+        self.assertLess(
+            with_radiation.temperature_c[-1],
+            convection_only.temperature_c[-1],
+        )
+        self.assertGreater(max(with_radiation.radiative_heat_rejection_w), 0.0)
+        self.assertLess(with_radiation.energy_balance_error_j, 1e-9)
+        for convective_w, radiative_w, total_w in zip(
+            with_radiation.convective_heat_rejection_w,
+            with_radiation.radiative_heat_rejection_w,
+            with_radiation.heat_rejection_w,
+            strict=True,
+        ):
+            self.assertAlmostEqual(convective_w + radiative_w, total_w, places=12)
+
+    def test_radiation_can_add_heat_below_ambient(self):
+        result = simulate_lumped_temperature(
+            [0.0],
+            LumpedThermalSpec(
+                initial_temperature_c=5.0,
+                ambient_temperature_c=25.0,
+                heat_transfer_w_per_k=0.0,
+                emissivity=0.9,
+                radiating_area_m2=0.04,
+                time_step_s=60.0,
+                integration_method=IntegrationMethod.RK4,
+            ),
+        )
+
+        self.assertLess(result.radiative_heat_rejection_w[0], 0.0)
+        self.assertGreater(result.temperature_c[-1], 5.0)
+
+    def test_rk4_export_includes_radiative_heat_components(self):
+        result = simulate_lumped_temperature(
+            [120.0, 120.0],
+            LumpedThermalSpec(
+                time_step_s=300.0,
+                emissivity=0.85,
+                radiating_area_m2=0.03,
+                integration_method=IntegrationMethod.RK4,
+            ),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "radiation.csv"
+            write_simulation_csv(path, result)
+            with path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+
+        self.assertEqual(float(rows[0]["emissivity"]), 0.85)
+        self.assertEqual(float(rows[0]["radiating_area_m2"]), 0.03)
+        self.assertIn("convective_heat_rejection_w", rows[0])
+        self.assertIn("radiative_heat_rejection_w", rows[0])
+        self.assertGreater(float(rows[1]["radiative_heat_rejection_w"]), 0.0)
+        self.assertAlmostEqual(
+            float(rows[1]["heat_rejection_w"]),
+            float(rows[1]["convective_heat_rejection_w"])
+            + float(rows[1]["radiative_heat_rejection_w"]),
+            places=9,
+        )
+
+    def test_cli_runs_nonlinear_radiation_case(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a",
+                    "120",
+                    "--duration-s",
+                    "600",
+                    "--time-step-s",
+                    "300",
+                    "--emissivity",
+                    "0.85",
+                    "--radiating-area-m2",
+                    "0.03",
+                    "--integration-method",
+                    "rk4",
+                    "--rk4-max-step-s",
+                    "0.5",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = standard_output.getvalue()
+        self.assertIn("Integration method: rk4", output)
+        self.assertIn("Radiation coefficient: ", output)
+        self.assertIn("Radiative heat-rejection range: ", output)
+        self.assertIn("RK4 maximum internal step: 0.5 s", output)
 
 
 if __name__ == "__main__":
