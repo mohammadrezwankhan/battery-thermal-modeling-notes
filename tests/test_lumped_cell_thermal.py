@@ -371,6 +371,7 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.time_s, (0.0, 60.0, 120.0))
         self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
         self.assertIsNone(profile.ambient_temperature_c)
+        self.assertIsNone(profile.radiative_surroundings_temperature_c)
         self.assertIsNone(profile.entropic_coefficient_v_per_k)
         self.assertEqual(profile.time_step_s, 60.0)
         self.assertEqual(profile.interval_duration_s, (60.0, 60.0, 60.0))
@@ -422,6 +423,24 @@ class LumpedCellThermalTests(unittest.TestCase):
             (0.0001, -0.0002),
         )
 
+    def test_loads_profile_with_radiative_surroundings_temperature(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s,ambient_temperature_c,"
+                "radiative_surroundings_temperature_c,heat_transfer_w_per_k\n"
+                "0,0,30,20,45,0.0\n"
+                "30,75,90,25,35,1.2\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.ambient_temperature_c, (20.0, 25.0))
+        self.assertEqual(
+            profile.radiative_surroundings_temperature_c,
+            (45.0, 35.0),
+        )
+        self.assertEqual(profile.heat_transfer_w_per_k, (0.0, 1.2))
+
     def test_loads_profile_with_interval_heat_transfer(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "profile.csv"
@@ -447,6 +466,41 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertGreater(warming.temperature_c[-1], 25.0)
         self.assertTrue(all(value < 0.0 for value in warming.heat_rejection_w))
         self.assertLess(warming.energy_balance_error_j, 1e-8)
+
+    def test_radiative_surroundings_decouples_radiation_from_convection(self):
+        spec = LumpedThermalSpec(
+            initial_temperature_c=25.0,
+            ambient_temperature_c=25.0,
+            heat_transfer_w_per_k=2.0,
+            emissivity=0.9,
+            radiating_area_m2=0.04,
+            time_step_s=120.0,
+            rk4_max_step_s=0.5,
+            integration_method=IntegrationMethod.RK4,
+        )
+        baseline = simulate_lumped_temperature([0.0], spec)
+        hot_enclosure = simulate_lumped_temperature(
+            [0.0],
+            spec,
+            radiative_surroundings_temperatures_c=[55.0],
+        )
+
+        self.assertEqual(baseline.radiative_surroundings_temperature_c, (25.0,))
+        self.assertEqual(
+            hot_enclosure.radiative_surroundings_temperature_c,
+            (55.0,),
+        )
+        self.assertEqual(
+            baseline.convective_heat_rejection_w,
+            hot_enclosure.convective_heat_rejection_w,
+        )
+        self.assertEqual(baseline.radiative_heat_rejection_w, (0.0,))
+        self.assertLess(hot_enclosure.radiative_heat_rejection_w[0], 0.0)
+        self.assertGreater(
+            hot_enclosure.temperature_c[-1],
+            baseline.temperature_c[-1],
+        )
+        self.assertLess(hot_enclosure.energy_balance_error_j, 1e-9)
 
     def test_variable_duration_exact_solution_matches_total_elapsed_time(self):
         spec = LumpedThermalSpec(
@@ -478,6 +532,33 @@ class LumpedCellThermalTests(unittest.TestCase):
             simulate_lumped_temperature([10.0, 20.0], ambient_temperatures_c=[25.0])
         with self.assertRaisesRegex(ValueError, "temperature values must be finite"):
             simulate_lumped_temperature([10.0], ambient_temperatures_c=[math.nan])
+
+    def test_rejects_invalid_radiative_surroundings_profile(self):
+        with self.assertRaisesRegex(ValueError, "one value per current interval"):
+            simulate_lumped_temperature(
+                [10.0, 20.0],
+                radiative_surroundings_temperatures_c=[25.0],
+            )
+        with self.assertRaisesRegex(ValueError, "temperature values must be finite"):
+            simulate_lumped_temperature(
+                [10.0],
+                radiative_surroundings_temperatures_c=[math.nan],
+            )
+        with self.assertRaisesRegex(ValueError, "must be above absolute zero"):
+            simulate_lumped_temperature(
+                [10.0],
+                radiative_surroundings_temperatures_c=[-273.15],
+            )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,radiative_surroundings_temperature_c\n"
+                "0,0,-273.15\n1,0,25\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "must be above absolute zero"):
+                load_current_profile(path)
 
     def test_rejects_invalid_interval_duration_profile(self):
         with self.assertRaisesRegex(ValueError, "one value per current interval"):
@@ -568,6 +649,10 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(float(rows[0]["current_a"]), 50.0)
         self.assertEqual(float(rows[0]["duration_s"]), 1.0)
         self.assertEqual(float(rows[0]["ambient_temperature_c"]), 25.0)
+        self.assertEqual(
+            float(rows[0]["radiative_surroundings_temperature_c"]),
+            25.0,
+        )
         self.assertEqual(float(rows[0]["heat_transfer_w_per_k"]), 1.2)
         self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
         self.assertEqual(float(rows[0]["entropic_coefficient_v_per_k"]), 0.0)
@@ -855,6 +940,24 @@ class LumpedCellThermalTests(unittest.TestCase):
                     ]
                 )
 
+    def test_profile_radiative_surroundings_rejects_constant_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            profile_path.write_text(
+                "time_s,current_a,radiative_surroundings_temperature_c\n"
+                "0,0,25\n1,10,30\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cannot be combined"):
+                main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--radiative-surroundings-temperature-c",
+                        "20",
+                    ]
+                )
+
     def test_profile_entropic_coefficient_rejects_constant_override(self):
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "profile.csv"
@@ -944,6 +1047,10 @@ class LumpedCellThermalTests(unittest.TestCase):
 
         self.assertEqual(result.emissivity, 0.0)
         self.assertEqual(result.radiating_area_m2, 0.0)
+        self.assertEqual(
+            result.radiative_surroundings_temperature_c,
+            result.ambient_temperature_c,
+        )
         self.assertTrue(
             all(value == 0.0 for value in result.radiative_heat_rejection_w)
         )
@@ -985,6 +1092,10 @@ class LumpedCellThermalTests(unittest.TestCase):
             (
                 LumpedThermalSpec(emissivity=0.0, radiating_area_m2=0.03),
                 "both be zero or both positive",
+            ),
+            (
+                LumpedThermalSpec(radiative_surroundings_temperature_c=-273.15),
+                "above absolute zero",
             ),
             (LumpedThermalSpec(rk4_max_step_s=0.0), "must be positive"),
         ]
@@ -1091,6 +1202,10 @@ class LumpedCellThermalTests(unittest.TestCase):
 
         self.assertEqual(float(rows[0]["emissivity"]), 0.85)
         self.assertEqual(float(rows[0]["radiating_area_m2"]), 0.03)
+        self.assertEqual(
+            float(rows[0]["radiative_surroundings_temperature_c"]),
+            25.0,
+        )
         self.assertIn("convective_heat_rejection_w", rows[0])
         self.assertIn("radiative_heat_rejection_w", rows[0])
         self.assertGreater(float(rows[1]["radiative_heat_rejection_w"]), 0.0)
@@ -1116,6 +1231,8 @@ class LumpedCellThermalTests(unittest.TestCase):
                     "0.85",
                     "--radiating-area-m2",
                     "0.03",
+                    "--radiative-surroundings-temperature-c",
+                    "45",
                     "--integration-method",
                     "rk4",
                     "--rk4-max-step-s",
@@ -1127,6 +1244,10 @@ class LumpedCellThermalTests(unittest.TestCase):
         output = standard_output.getvalue()
         self.assertIn("Integration method: rk4", output)
         self.assertIn("Radiation coefficient: ", output)
+        self.assertIn(
+            "Radiative-surroundings temperature range: 45 to 45 degC",
+            output,
+        )
         self.assertIn("Radiative heat-rejection range: ", output)
         self.assertIn("RK4 maximum internal step: 0.5 s", output)
 
