@@ -12,7 +12,7 @@ For each time interval, the model evaluates:
 ```text
 Q_irreversible = I^2 R
 Q_reversible = -I T_kelvin dU_oc/dT
-Q_generation = Q_irreversible + Q_reversible
+Q_generation = Q_irreversible + Q_reversible + Q_external
 R(T) = R_ref [1 + alpha (T_cell - T_ref)]
 Q_convection = h(t) (T_cell - T_ambient)
 Q_radiation = epsilon sigma A (T_cell_kelvin^4 - T_surroundings_kelvin^4)
@@ -293,13 +293,46 @@ temperature is rejected. Replace the reference resistance, coefficient, and
 temperature with values fitted or measured for the target cell and operating
 window before engineering use.
 
+## External Heat-Source Profile
+
+Use `--external-heat-w` for a constant signed heat flow into the lumped node,
+or add `external_heat_w` to a current-profile CSV for a piecewise-constant
+schedule. Positive values add heat; negative values represent an independently
+specified heat sink. This can represent a controlled heater, neighboring
+component, interconnect estimate, or calibrated parasitic source without
+folding that term into electrical resistance.
+
+Run the committed profile through the exact linear integrator:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/external_heat_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/external_heat_intervals.csv
+```
+
+The exported `external_heat_w` column remains separate from irreversible and
+reversible heat. `heat_generation_w` is their signed sum, and `net_heat_j`
+continues to close the stored thermal-energy balance for explicit Euler, exact
+linear, and RK4 integration. A profile source takes precedence over the default
+zero source; combining a profile column with `--external-heat-w` is rejected so
+the boundary condition remains unambiguous.
+
+This input is a prescribed source, not a conduction network or a solved heater
+controller. Its sign, location, time alignment, and physical basis must be
+documented before engineering use. A negative source can remove more heat than
+the electrical terms generate, but it does not enforce coolant, surface, or
+absolute-temperature constraints beyond the model's existing validation.
+
 ## Explicit Limitations
 
 - Resistance may use an optional linear temperature coefficient, but it does
   not vary with SOC or age and does not represent a nonlinear measured map.
 - Reversible heat uses a supplied constant or piecewise-constant entropic
   coefficient; the model does not derive its SOC or chemistry dependence.
-- Mixing, phase-change, side-reaction, and interconnect heat are excluded.
+- External heat is prescribed rather than derived from a neighboring thermal
+  node, heater controller, or interconnect model.
+- Mixing, phase-change, and side-reaction heat are excluded.
 - The cell is represented by one uniform temperature state.
 - Convection is linear; optional diffuse-gray radiation uses constant surface
   emissivity and area with ambient as the radiative-surroundings temperature.
