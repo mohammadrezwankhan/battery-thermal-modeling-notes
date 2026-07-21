@@ -46,6 +46,7 @@ class LumpedCellThermalTests(unittest.TestCase):
                 limit_temperature_c=25.0,
                 exceeded=True,
                 first_exceedance_time_s=5.0,
+                final_recovery_time_s=None,
                 time_above_limit_s=15.0,
                 exposure_fraction=0.75,
                 peak_temperature_c=40.0,
@@ -70,8 +71,29 @@ class LumpedCellThermalTests(unittest.TestCase):
         assessment = result.assess_temperature_limit(25.0)
 
         self.assertEqual(assessment.first_exceedance_time_s, 5.0)
+        self.assertEqual(assessment.final_recovery_time_s, 15.0)
         self.assertEqual(assessment.time_above_limit_s, 10.0)
         self.assertEqual(assessment.exposure_fraction, 0.5)
+
+    def test_temperature_limit_reports_recovery_after_last_excursion(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0, 0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=20.0,
+                time_step_s=10.0,
+            ),
+            external_heats_w=(1.0, -1.0, 1.0, -1.0),
+        )
+
+        assessment = result.assess_temperature_limit(25.0)
+
+        self.assertEqual(assessment.first_exceedance_time_s, 5.0)
+        self.assertEqual(assessment.final_recovery_time_s, 35.0)
+        self.assertEqual(assessment.time_above_limit_s, 20.0)
 
     def test_temperature_limit_uses_variable_interval_durations(self):
         result = simulate_lumped_temperature(
@@ -98,6 +120,7 @@ class LumpedCellThermalTests(unittest.TestCase):
 
         self.assertFalse(assessment.exceeded)
         self.assertIsNone(assessment.first_exceedance_time_s)
+        self.assertIsNone(assessment.final_recovery_time_s)
         self.assertEqual(assessment.time_above_limit_s, 0.0)
         self.assertEqual(assessment.margin_to_limit_c, 0.0)
 
@@ -119,6 +142,7 @@ class LumpedCellThermalTests(unittest.TestCase):
 
         self.assertTrue(assessment.exceeded)
         self.assertEqual(assessment.first_exceedance_time_s, 0.0)
+        self.assertEqual(assessment.final_recovery_time_s, 5.0)
         self.assertEqual(assessment.time_above_limit_s, 5.0)
 
     def test_temperature_limit_rejects_nonphysical_values(self):
@@ -142,7 +166,9 @@ class LumpedCellThermalTests(unittest.TestCase):
 
         self.assertEqual([row["exceeded"] for row in rows], ["true", "false"])
         self.assertEqual(float(rows[0]["first_exceedance_time_s"]), 5.0)
+        self.assertEqual(rows[0]["final_recovery_time_s"], "")
         self.assertEqual(rows[1]["first_exceedance_time_s"], "")
+        self.assertEqual(rows[1]["final_recovery_time_s"], "")
         self.assertEqual(float(rows[1]["margin_to_limit_c"]), 5.0)
 
     def test_temperature_limit_report_requires_assessments(self):
