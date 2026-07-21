@@ -49,6 +49,13 @@ jobs:
           --integration-method exact-linear
           --output-csv "$RUNNER_TEMP/variable-cooling-intervals.csv"
 
+      - name: Run external heat-source example
+        run: >-
+          python models/lumped_cell_thermal.py
+          --profile-csv models/data/external_heat_profile.csv
+          --integration-method exact-linear
+          --output-csv "$RUNNER_TEMP/external-heat-intervals.csv"
+
       - name: Run radiative surroundings example
         run: >-
           python models/lumped_cell_thermal.py
