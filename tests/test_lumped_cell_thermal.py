@@ -12,14 +12,198 @@ from models.lumped_cell_thermal import (
     IntegrationMethod,
     LumpedThermalSpec,
     STEFAN_BOLTZMANN_W_PER_M2_K4,
+    TemperatureLimitAssessment,
     load_current_profile,
     main,
     simulate_lumped_temperature,
     write_simulation_csv,
+    write_temperature_limit_csv,
 )
 
 
 class LumpedCellThermalTests(unittest.TestCase):
+    @staticmethod
+    def linear_heating_result():
+        return simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                external_heat_w=1.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=20.0,
+                time_step_s=10.0,
+            ),
+        )
+
+    def test_temperature_limit_interpolates_crossing_and_exposure(self):
+        assessment = self.linear_heating_result().assess_temperature_limit(25.0)
+
+        self.assertEqual(
+            assessment,
+            TemperatureLimitAssessment(
+                limit_temperature_c=25.0,
+                exceeded=True,
+                first_exceedance_time_s=5.0,
+                time_above_limit_s=15.0,
+                exposure_fraction=0.75,
+                peak_temperature_c=40.0,
+                margin_to_limit_c=-15.0,
+            ),
+        )
+
+    def test_temperature_limit_counts_heating_and_cooling_crossings(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=20.0,
+                time_step_s=10.0,
+            ),
+            external_heats_w=(1.0, -1.0),
+        )
+
+        assessment = result.assess_temperature_limit(25.0)
+
+        self.assertEqual(assessment.first_exceedance_time_s, 5.0)
+        self.assertEqual(assessment.time_above_limit_s, 10.0)
+        self.assertEqual(assessment.exposure_fraction, 0.5)
+
+    def test_temperature_limit_uses_variable_interval_durations(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=20.0,
+            ),
+            interval_durations_s=(5.0, 15.0),
+            external_heats_w=(2.0, -2.0 / 3.0),
+        )
+
+        assessment = result.assess_temperature_limit(25.0)
+
+        self.assertEqual(result.time_s, (0.0, 5.0, 20.0))
+        self.assertEqual(assessment.first_exceedance_time_s, 2.5)
+        self.assertEqual(assessment.time_above_limit_s, 10.0)
+
+    def test_temperature_limit_equal_to_peak_is_not_exceeded(self):
+        assessment = self.linear_heating_result().assess_temperature_limit(40.0)
+
+        self.assertFalse(assessment.exceeded)
+        self.assertIsNone(assessment.first_exceedance_time_s)
+        self.assertEqual(assessment.time_above_limit_s, 0.0)
+        self.assertEqual(assessment.margin_to_limit_c, 0.0)
+
+    def test_temperature_limit_detects_initial_exceedance(self):
+        result = simulate_lumped_temperature(
+            [0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                external_heat_w=-1.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=30.0,
+                time_step_s=10.0,
+            ),
+        )
+
+        assessment = result.assess_temperature_limit(25.0)
+
+        self.assertTrue(assessment.exceeded)
+        self.assertEqual(assessment.first_exceedance_time_s, 0.0)
+        self.assertEqual(assessment.time_above_limit_s, 5.0)
+
+    def test_temperature_limit_rejects_nonphysical_values(self):
+        result = self.linear_heating_result()
+        for value in (float("nan"), float("inf"), -273.15):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    result.assess_temperature_limit(value)
+
+    def test_writes_temperature_limit_report(self):
+        result = self.linear_heating_result()
+        assessments = (
+            result.assess_temperature_limit(25.0),
+            result.assess_temperature_limit(45.0),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "limits.csv"
+            write_temperature_limit_csv(path, assessments)
+            with path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+
+        self.assertEqual([row["exceeded"] for row in rows], ["true", "false"])
+        self.assertEqual(float(rows[0]["first_exceedance_time_s"]), 5.0)
+        self.assertEqual(rows[1]["first_exceedance_time_s"], "")
+        self.assertEqual(float(rows[1]["margin_to_limit_c"]), 5.0)
+
+    def test_temperature_limit_report_requires_assessments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "limits.csv"
+            with self.assertRaisesRegex(ValueError, "at least one"):
+                write_temperature_limit_csv(path, ())
+
+    def test_cli_reports_repeated_temperature_limits(self):
+        standard_output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            report_path = Path(directory) / "limits.csv"
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--current-a",
+                        "0",
+                        "--duration-s",
+                        "20",
+                        "--time-step-s",
+                        "10",
+                        "--mass-kg",
+                        "1",
+                        "--specific-heat-j-per-kg-k",
+                        "1",
+                        "--heat-transfer-w-per-k",
+                        "0",
+                        "--external-heat-w",
+                        "1",
+                        "--initial-temperature-c",
+                        "20",
+                        "--temperature-limit-c",
+                        "25",
+                        "--temperature-limit-c",
+                        "45",
+                        "--limit-report-csv",
+                        str(report_path),
+                    ]
+                )
+            rows = list(csv.DictReader(report_path.read_text().splitlines()))
+
+        output = standard_output.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Temperature limit 25 degC: EXCEEDED", output)
+        self.assertIn("First exceedance: 5 s", output)
+        self.assertIn("Temperature limit 45 degC: PASS", output)
+        self.assertEqual(len(rows), 2)
+
+    def test_cli_rejects_missing_or_duplicate_temperature_limits(self):
+        with self.assertRaisesRegex(ValueError, "requires at least one"):
+            main(["--limit-report-csv", "limits.csv"])
+        with self.assertRaisesRegex(ValueError, "must be unique"):
+            main(
+                [
+                    "--temperature-limit-c",
+                    "45",
+                    "--temperature-limit-c",
+                    "45",
+                ]
+            )
+
     def test_zero_current_stays_at_ambient_equilibrium(self):
         result = simulate_lumped_temperature([0.0] * 120)
         self.assertTrue(all(value == 25.0 for value in result.temperature_c))

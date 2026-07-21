@@ -66,6 +66,15 @@ jobs:
           --rk4-max-step-s 0.5
           --output-csv "$RUNNER_TEMP/radiative-surroundings-intervals.csv"
 
+      - name: Assess temperature-limit exposure
+        run: >-
+          python models/lumped_cell_thermal.py
+          --current-a 75
+          --duration-s 600
+          --temperature-limit-c 30
+          --temperature-limit-c 35
+          --limit-report-csv "$RUNNER_TEMP/temperature-limits.csv"
+
       - name: Check Markdown links
         uses: lycheeverse/lychee-action@v2
         with:
