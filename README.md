@@ -93,9 +93,9 @@ LICENSE
 ## Run The Executable Reference
 
 The dependency-free lumped model implements irreversible `I^2 R` heating,
-optional linear resistance-temperature feedback, linear heat rejection,
-explicit Euler or exact linear interval integration, and an energy-balance
-diagnostic:
+optional reversible entropic heat, linear resistance-temperature feedback,
+linear heat rejection, explicit Euler or exact linear interval integration,
+and an energy-balance diagnostic:
 
 ```powershell
 python models/lumped_cell_thermal.py --current-a 75 --duration-s 600
@@ -112,14 +112,18 @@ python models/lumped_cell_thermal.py `
   --profile-csv models/data/irregular_current_profile.csv `
   --integration-method exact-linear `
   --output-csv results/irregular_thermal_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/reversible_heat_current_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/reversible_heat_intervals.csv
 python -m unittest discover -s tests -v
 ```
 
 See the [model assumptions and limitations](models/README.md) before adapting
 the parameters or using the output in an engineering review. The profile path
 supports traceable charge/discharge duty cycles, optional interval ambient
-temperature, explicit nonuniform interval durations, and interval-level CSV
-results.
+temperature and entropic coefficients, explicit nonuniform interval durations,
+and interval-level CSV results.
 
 ## Contribution Entry Points
 
