@@ -4,8 +4,14 @@ import argparse
 import csv
 import math
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Sequence
+
+
+class IntegrationMethod(str, Enum):
+    EXPLICIT_EULER = "explicit-euler"
+    EXACT_LINEAR = "exact-linear"
 
 
 @dataclass(frozen=True)
@@ -21,12 +27,14 @@ class LumpedThermalSpec:
     ambient_temperature_c: float = 25.0
     initial_temperature_c: float = 25.0
     time_step_s: float = 1.0
+    integration_method: IntegrationMethod | str = IntegrationMethod.EXPLICIT_EULER
 
     @property
     def thermal_capacity_j_per_k(self) -> float:
         return self.mass_kg * self.specific_heat_j_per_kg_k
 
     def validate(self) -> None:
+        self.resolved_integration_method()
         finite_values = {
             "mass_kg": self.mass_kg,
             "specific_heat_j_per_kg_k": self.specific_heat_j_per_kg_k,
@@ -58,6 +66,15 @@ class LumpedThermalSpec:
             raise ValueError("time_step_s must be positive")
         self.resistance_at_temperature(self.initial_temperature_c)
 
+    def resolved_integration_method(self) -> IntegrationMethod:
+        """Return the configured integration method as a validated enum."""
+
+        try:
+            return IntegrationMethod(self.integration_method)
+        except ValueError as error:
+            choices = ", ".join(method.value for method in IntegrationMethod)
+            raise ValueError(f"integration_method must be one of: {choices}") from error
+
     def resistance_at_temperature(self, temperature_c: float) -> float:
         """Evaluate the configured linear resistance-temperature relation."""
 
@@ -84,8 +101,10 @@ class ThermalSimulation:
     resistance_ohm: tuple[float, ...]
     heat_generation_w: tuple[float, ...]
     heat_rejection_w: tuple[float, ...]
+    interval_net_heat_j: tuple[float, ...]
     thermal_capacity_j_per_k: float
     time_step_s: float
+    integration_method: IntegrationMethod
 
     @property
     def peak_temperature_c(self) -> float:
@@ -99,14 +118,7 @@ class ThermalSimulation:
 
     @property
     def integrated_net_heat_j(self) -> float:
-        return sum(
-            (generated - rejected) * self.time_step_s
-            for generated, rejected in zip(
-                self.heat_generation_w,
-                self.heat_rejection_w,
-                strict=True,
-            )
-        )
+        return sum(self.interval_net_heat_j)
 
     @property
     def energy_balance_error_j(self) -> float:
@@ -201,9 +213,10 @@ def simulate_lumped_temperature(
     spec: LumpedThermalSpec = LumpedThermalSpec(),
     ambient_temperatures_c: Sequence[float] | None = None,
 ) -> ThermalSimulation:
-    """Integrate a one-node thermal balance with explicit Euler steps."""
+    """Integrate a one-node thermal balance over piecewise-constant intervals."""
 
     spec.validate()
+    integration_method = spec.resolved_integration_method()
     currents = tuple(float(current) for current in currents_a)
     if not currents:
         raise ValueError("currents_a must contain at least one interval")
@@ -226,6 +239,7 @@ def simulate_lumped_temperature(
     temperatures = [spec.initial_temperature_c]
     generated_heat: list[float] = []
     rejected_heat: list[float] = []
+    interval_net_heat: list[float] = []
     interval_resistance: list[float] = []
 
     for current, ambient_temperature_c in zip(
@@ -235,16 +249,48 @@ def simulate_lumped_temperature(
         resistance_ohm = spec.resistance_at_temperature(temperature)
         generation_w = current * current * resistance_ohm
         rejection_w = spec.heat_transfer_w_per_k * (temperature - ambient_temperature_c)
-        temperature_change_c = (
-            (generation_w - rejection_w)
-            * spec.time_step_s
-            / spec.thermal_capacity_j_per_k
-        )
+        net_heat_w = generation_w - rejection_w
+        if integration_method is IntegrationMethod.EXPLICIT_EULER:
+            temperature_change_c = (
+                net_heat_w * spec.time_step_s / spec.thermal_capacity_j_per_k
+            )
+        else:
+            thermal_feedback_w_per_k = (
+                current
+                * current
+                * spec.resistance_ohm
+                * spec.resistance_temperature_coefficient_per_k
+                - spec.heat_transfer_w_per_k
+            )
+            if thermal_feedback_w_per_k == 0.0:
+                temperature_change_c = (
+                    net_heat_w * spec.time_step_s / spec.thermal_capacity_j_per_k
+                )
+            else:
+                exponent = (
+                    thermal_feedback_w_per_k
+                    * spec.time_step_s
+                    / spec.thermal_capacity_j_per_k
+                )
+                try:
+                    temperature_change_c = (
+                        net_heat_w * math.expm1(exponent) / thermal_feedback_w_per_k
+                    )
+                except OverflowError as error:
+                    raise ValueError(
+                        "exact integration produced a non-finite temperature"
+                    ) from error
+
+        next_temperature_c = temperature + temperature_change_c
+        if not math.isfinite(next_temperature_c):
+            raise ValueError("integration produced a non-finite temperature")
+        spec.resistance_at_temperature(next_temperature_c)
 
         interval_resistance.append(resistance_ohm)
         generated_heat.append(generation_w)
         rejected_heat.append(rejection_w)
-        temperatures.append(temperature + temperature_change_c)
+        interval_net_heat.append(temperature_change_c * spec.thermal_capacity_j_per_k)
+        temperatures.append(next_temperature_c)
 
     times = tuple(index * spec.time_step_s for index in range(len(currents) + 1))
     return ThermalSimulation(
@@ -255,8 +301,10 @@ def simulate_lumped_temperature(
         resistance_ohm=tuple(interval_resistance),
         heat_generation_w=tuple(generated_heat),
         heat_rejection_w=tuple(rejected_heat),
+        interval_net_heat_j=tuple(interval_net_heat),
         thermal_capacity_j_per_k=spec.thermal_capacity_j_per_k,
         time_step_s=spec.time_step_s,
+        integration_method=integration_method,
     )
 
 
@@ -292,7 +340,7 @@ def write_simulation_csv(path: Path, result: ThermalSimulation) -> None:
                 "end_temperature_c": result.temperature_c[index + 1],
                 "heat_generation_w": generated_w,
                 "heat_rejection_w": rejected_w,
-                "net_heat_j": (generated_w - rejected_w) * result.time_step_s,
+                "net_heat_j": result.interval_net_heat_j[index],
             }
             writer.writerow(
                 {name: format(value, ".12g") for name, value in values.items()}
@@ -324,6 +372,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--initial-temperature-c", type=float, default=25.0)
     parser.add_argument("--mass-kg", type=float, default=1.05)
     parser.add_argument("--specific-heat-j-per-kg-k", type=float, default=1000.0)
+    parser.add_argument(
+        "--integration-method",
+        choices=tuple(method.value for method in IntegrationMethod),
+        default=IntegrationMethod.EXPLICIT_EULER.value,
+    )
     return parser.parse_args(argv)
 
 
@@ -385,6 +438,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ambient_temperature_c=ambient_temperature_c,
         initial_temperature_c=args.initial_temperature_c,
         time_step_s=time_step_s,
+        integration_method=args.integration_method,
     )
     result = simulate_lumped_temperature(currents, spec, ambient_temperatures_c)
 
@@ -393,6 +447,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print(f"Intervals: {len(currents)}")
     print(f"Duration: {len(currents) * time_step_s:.3f} s")
+    print(f"Integration method: {result.integration_method.value}")
     print(f"Final temperature: {result.temperature_c[-1]:.3f} degC")
     print(f"Peak temperature: {result.peak_temperature_c:.3f} degC")
     print(
