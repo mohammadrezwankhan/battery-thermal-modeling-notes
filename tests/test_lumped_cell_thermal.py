@@ -13,6 +13,7 @@ from models.lumped_cell_thermal import (
     LumpedThermalSpec,
     STEFAN_BOLTZMANN_W_PER_M2_K4,
     TemperatureLimitAssessment,
+    MinimumTemperatureAssessment,
     load_current_profile,
     main,
     simulate_lumped_temperature,
@@ -152,6 +153,44 @@ class LumpedCellThermalTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     result.assess_temperature_limit(value)
 
+    def test_minimum_temperature_interpolates_cooling_violation(self):
+        result = simulate_lumped_temperature(
+            [0.0, 0.0],
+            LumpedThermalSpec(
+                mass_kg=1.0,
+                specific_heat_j_per_kg_k=1.0,
+                resistance_ohm=0.0,
+                external_heat_w=-1.0,
+                heat_transfer_w_per_k=0.0,
+                initial_temperature_c=30.0,
+                time_step_s=10.0,
+            ),
+        )
+
+        assessment = result.assess_minimum_temperature(25.0)
+
+        self.assertEqual(
+            assessment,
+            MinimumTemperatureAssessment(
+                minimum_temperature_c=25.0,
+                violated=True,
+                first_violation_time_s=5.0,
+                time_below_minimum_s=15.0,
+                exposure_fraction=0.75,
+                lowest_temperature_c=10.0,
+                margin_to_minimum_c=-15.0,
+            ),
+        )
+
+    def test_minimum_temperature_touching_lowest_value_passes(self):
+        result = self.linear_heating_result()
+        assessment = result.assess_minimum_temperature(20.0)
+
+        self.assertFalse(assessment.violated)
+        self.assertIsNone(assessment.first_violation_time_s)
+        self.assertEqual(assessment.time_below_minimum_s, 0.0)
+        self.assertEqual(assessment.margin_to_minimum_c, 0.0)
+
     def test_writes_temperature_limit_report(self):
         result = self.linear_heating_result()
         assessments = (
@@ -216,6 +255,23 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertIn("First exceedance: 5 s", output)
         self.assertIn("Temperature limit 45 degC: PASS", output)
         self.assertEqual(len(rows), 2)
+
+    def test_cli_reports_minimum_temperature_violation(self):
+        standard_output = io.StringIO()
+        with contextlib.redirect_stdout(standard_output):
+            exit_code = main(
+                [
+                    "--current-a", "0", "--duration-s", "20", "--time-step-s", "10",
+                    "--mass-kg", "1", "--specific-heat-j-per-kg-k", "1",
+                    "--resistance-ohm", "0", "--heat-transfer-w-per-k", "0",
+                    "--initial-temperature-c", "30", "--external-heat-w", "-1",
+                    "--minimum-temperature-c", "25",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Minimum temperature 25 degC: VIOLATED", standard_output.getvalue())
+        self.assertIn("First violation: 5 s", standard_output.getvalue())
 
     def test_cli_rejects_missing_or_duplicate_temperature_limits(self):
         with self.assertRaisesRegex(ValueError, "requires at least one"):

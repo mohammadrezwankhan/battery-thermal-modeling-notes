@@ -343,6 +343,10 @@ time above the limit, exposure fraction, peak temperature, and
 signed margin from the peak to the limit. A negative margin means the simulated
 peak exceeded the limit. The limit itself is not counted as an exceedance.
 
+Use repeated `--minimum-temperature-c` values to report the corresponding
+cold-limit violations. These summaries interpolate the first below-limit
+crossing and time below the threshold; touching the minimum temperature passes.
+
 Crossing times and exposure duration use piecewise-linear interpolation between
 the reported temperature states. This makes the calculation deterministic for
 uniform and variable-duration profiles, but it does not reconstruct motion

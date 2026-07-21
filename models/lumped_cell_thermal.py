@@ -199,6 +199,19 @@ class TemperatureLimitAssessment:
 
 
 @dataclass(frozen=True)
+class MinimumTemperatureAssessment:
+    """Piecewise-linear cold-exposure metrics for one minimum temperature."""
+
+    minimum_temperature_c: float
+    violated: bool
+    first_violation_time_s: float | None
+    time_below_minimum_s: float
+    exposure_fraction: float
+    lowest_temperature_c: float
+    margin_to_minimum_c: float
+
+
+@dataclass(frozen=True)
 class ThermalSimulation:
     """Discrete temperatures and interval-level heat flows."""
 
@@ -306,6 +319,58 @@ class ThermalSimulation:
             exposure_fraction=time_above_limit_s / self.duration_s,
             peak_temperature_c=peak_temperature_c,
             margin_to_limit_c=limit_temperature_c - peak_temperature_c,
+        )
+
+    def assess_minimum_temperature(
+        self,
+        minimum_temperature_c: float,
+    ) -> MinimumTemperatureAssessment:
+        """Assess time below a minimum by interpolating result states."""
+
+        _temperature_k(minimum_temperature_c, "minimum_temperature_c")
+        first_violation_time_s: float | None = None
+        time_below_minimum_s = 0.0
+        if self.temperature_c[0] < minimum_temperature_c:
+            first_violation_time_s = self.time_s[0]
+
+        for start_time_s, end_time_s, start_c, end_c in zip(
+            self.time_s[:-1],
+            self.time_s[1:],
+            self.temperature_c[:-1],
+            self.temperature_c[1:],
+            strict=True,
+        ):
+            duration_s = end_time_s - start_time_s
+            start_below = start_c < minimum_temperature_c
+            end_below = end_c < minimum_temperature_c
+            if start_below and end_below:
+                time_below_minimum_s += duration_s
+                if first_violation_time_s is None:
+                    first_violation_time_s = start_time_s
+                continue
+            if not start_below and not end_below:
+                continue
+
+            crossing_fraction = (minimum_temperature_c - start_c) / (end_c - start_c)
+            crossing_time_s = start_time_s + crossing_fraction * duration_s
+            if end_below:
+                time_below_minimum_s += end_time_s - crossing_time_s
+                if first_violation_time_s is None:
+                    first_violation_time_s = crossing_time_s
+            else:
+                time_below_minimum_s += crossing_time_s - start_time_s
+                if first_violation_time_s is None:
+                    first_violation_time_s = start_time_s
+
+        lowest_temperature_c = min(self.temperature_c)
+        return MinimumTemperatureAssessment(
+            minimum_temperature_c=minimum_temperature_c,
+            violated=first_violation_time_s is not None,
+            first_violation_time_s=first_violation_time_s,
+            time_below_minimum_s=time_below_minimum_s,
+            exposure_fraction=time_below_minimum_s / self.duration_s,
+            lowest_temperature_c=lowest_temperature_c,
+            margin_to_minimum_c=lowest_temperature_c - minimum_temperature_c,
         )
 
     @property
@@ -1029,6 +1094,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=float,
         dest="temperature_limits_c",
     )
+    parser.add_argument(
+        "--minimum-temperature-c",
+        action="append",
+        type=float,
+        dest="minimum_temperatures_c",
+    )
     parser.add_argument("--limit-report-csv", type=Path)
     parser.add_argument("--current-a", type=float)
     parser.add_argument("--duration-s", type=float)
@@ -1066,6 +1137,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     temperature_limits_c = tuple(args.temperature_limits_c or ())
+    minimum_temperatures_c = tuple(args.minimum_temperatures_c or ())
     if args.limit_report_csv and not temperature_limits_c:
         raise ValueError(
             "--limit-report-csv requires at least one --temperature-limit-c"
@@ -1074,6 +1146,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError("--temperature-limit-c values must be unique")
     for limit_temperature_c in temperature_limits_c:
         _temperature_k(limit_temperature_c, "temperature limit")
+    if len(set(minimum_temperatures_c)) != len(minimum_temperatures_c):
+        raise ValueError("--minimum-temperature-c values must be unique")
+    for minimum_temperature_c in minimum_temperatures_c:
+        _temperature_k(minimum_temperature_c, "minimum temperature")
 
     ambient_temperatures_c = None
     radiative_surroundings_temperatures_c = None
@@ -1208,6 +1284,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         result.assess_temperature_limit(limit_temperature_c)
         for limit_temperature_c in temperature_limits_c
     )
+    minimum_assessments = tuple(
+        result.assess_minimum_temperature(minimum_temperature_c)
+        for minimum_temperature_c in minimum_temperatures_c
+    )
     if args.limit_report_csv:
         write_temperature_limit_csv(args.limit_report_csv, limit_assessments)
 
@@ -1291,6 +1371,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"({assessment.exposure_fraction:.6%})"
         )
         print(f"  Margin to limit: {assessment.margin_to_limit_c:.6g} degC")
+    for assessment in minimum_assessments:
+        status = "VIOLATED" if assessment.violated else "PASS"
+        first_violation = (
+            "not violated"
+            if assessment.first_violation_time_s is None
+            else f"{assessment.first_violation_time_s:.6g} s"
+        )
+        print(
+            f"Minimum temperature {assessment.minimum_temperature_c:.6g} degC: "
+            f"{status}"
+        )
+        print(f"  First violation: {first_violation}")
+        print(
+            "  Exposure: "
+            f"{assessment.time_below_minimum_s:.6g} s "
+            f"({assessment.exposure_fraction:.6%})"
+        )
+        print(
+            "  Margin to minimum: "
+            f"{assessment.margin_to_minimum_c:.6g} degC"
+        )
     if args.output_csv:
         print(f"Interval results: {args.output_csv}")
     if args.limit_report_csv:
