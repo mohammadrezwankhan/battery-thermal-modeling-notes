@@ -1,0 +1,5 @@
+time_s,current_a,duration_s,ambient_temperature_c
+0,0,30,25
+30,75,90,30
+120,-50,15,35
+135,0,45,30

@@ -22,6 +22,7 @@ class LumpedCellThermalTests(unittest.TestCase):
     def test_zero_current_stays_at_ambient_equilibrium(self):
         result = simulate_lumped_temperature([0.0] * 120)
         self.assertTrue(all(value == 25.0 for value in result.temperature_c))
+        self.assertEqual(result.time_step_s, 1.0)
         self.assertEqual(result.energy_balance_error_j, 0.0)
 
     def test_constant_current_matches_discrete_solution(self):
@@ -237,6 +238,24 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
         self.assertIsNone(profile.ambient_temperature_c)
         self.assertEqual(profile.time_step_s, 60.0)
+        self.assertEqual(profile.interval_duration_s, (60.0, 60.0, 60.0))
+
+    def test_loads_explicit_nonuniform_interval_durations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s,ambient_temperature_c\n"
+                "0,0,30,25\n"
+                "30,75,90,30\n"
+                "120,-50,15,35\n",
+                encoding="utf-8",
+            )
+            profile = load_current_profile(path)
+        self.assertEqual(profile.time_s, (0.0, 30.0, 120.0))
+        self.assertEqual(profile.interval_duration_s, (30.0, 90.0, 15.0))
+        self.assertEqual(profile.current_a, (0.0, 75.0, -50.0))
+        self.assertEqual(profile.ambient_temperature_c, (25.0, 30.0, 35.0))
+        self.assertIsNone(profile.time_step_s)
 
     def test_loads_profile_with_interval_ambient_temperature(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -261,11 +280,47 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertTrue(all(value < 0.0 for value in warming.heat_rejection_w))
         self.assertLess(warming.energy_balance_error_j, 1e-8)
 
+    def test_variable_duration_exact_solution_matches_total_elapsed_time(self):
+        spec = LumpedThermalSpec(
+            integration_method=IntegrationMethod.EXACT_LINEAR,
+        )
+        variable = simulate_lumped_temperature(
+            [75.0, 75.0, 75.0],
+            spec,
+            interval_durations_s=[10.0, 20.0, 30.0],
+        )
+        reference = simulate_lumped_temperature(
+            [75.0],
+            spec,
+            interval_durations_s=[60.0],
+        )
+        self.assertEqual(variable.time_s, (0.0, 10.0, 30.0, 60.0))
+        self.assertEqual(variable.interval_duration_s, (10.0, 20.0, 30.0))
+        self.assertIsNone(variable.time_step_s)
+        self.assertEqual(variable.duration_s, 60.0)
+        self.assertAlmostEqual(
+            variable.temperature_c[-1],
+            reference.temperature_c[-1],
+            places=12,
+        )
+        self.assertLess(variable.energy_balance_error_j, 1e-9)
+
     def test_rejects_invalid_ambient_profile(self):
         with self.assertRaisesRegex(ValueError, "one value per current interval"):
             simulate_lumped_temperature([10.0, 20.0], ambient_temperatures_c=[25.0])
         with self.assertRaisesRegex(ValueError, "temperature values must be finite"):
             simulate_lumped_temperature([10.0], ambient_temperatures_c=[math.nan])
+
+    def test_rejects_invalid_interval_duration_profile(self):
+        with self.assertRaisesRegex(ValueError, "one value per current interval"):
+            simulate_lumped_temperature(
+                [10.0, 20.0],
+                interval_durations_s=[1.0],
+            )
+        with self.assertRaisesRegex(ValueError, "duration values must be finite"):
+            simulate_lumped_temperature([10.0], interval_durations_s=[math.nan])
+        with self.assertRaisesRegex(ValueError, "duration values must be positive"):
+            simulate_lumped_temperature([10.0], interval_durations_s=[0.0])
 
     def test_rejects_invalid_csv_header_and_time_grid(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -280,6 +335,22 @@ class LumpedCellThermalTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "uniform time step"):
                 load_current_profile(path)
 
+    def test_rejects_invalid_explicit_duration_schedule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "profile.csv"
+            path.write_text(
+                "time_s,current_a,duration_s\n0,0,0\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "duration_s must be positive"):
+                load_current_profile(path)
+            path.write_text(
+                "time_s,current_a,duration_s\n0,0,30\n40,10,20\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "previous interval end"):
+                load_current_profile(path)
+
     def test_writes_interval_level_energy_records(self):
         result = simulate_lumped_temperature([50.0, 0.0])
         with tempfile.TemporaryDirectory() as directory:
@@ -289,6 +360,7 @@ class LumpedCellThermalTests(unittest.TestCase):
                 rows = list(csv.DictReader(output_file))
         self.assertEqual(len(rows), 2)
         self.assertEqual(float(rows[0]["current_a"]), 50.0)
+        self.assertEqual(float(rows[0]["duration_s"]), 1.0)
         self.assertEqual(float(rows[0]["ambient_temperature_c"]), 25.0)
         self.assertEqual(float(rows[0]["resistance_ohm"]), 0.004)
         self.assertAlmostEqual(
@@ -343,6 +415,42 @@ class LumpedCellThermalTests(unittest.TestCase):
             self.assertTrue(output_path.is_file())
             self.assertIn("Intervals: 3", standard_output.getvalue())
             self.assertIn("Duration: 180.000 s", standard_output.getvalue())
+
+    def test_cli_runs_nonuniform_profile_and_exports_true_boundaries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "profile.csv"
+            output_path = Path(directory) / "result.csv"
+            profile_path.write_text(
+                "time_s,current_a,duration_s\n0,0,10\n10,75,20\n30,0,45\n",
+                encoding="utf-8",
+            )
+            standard_output = io.StringIO()
+            with contextlib.redirect_stdout(standard_output):
+                exit_code = main(
+                    [
+                        "--profile-csv",
+                        str(profile_path),
+                        "--output-csv",
+                        str(output_path),
+                        "--integration-method",
+                        "exact-linear",
+                    ]
+                )
+            with output_path.open("r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.DictReader(output_file))
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Duration: 75.000 s", standard_output.getvalue())
+        self.assertEqual(
+            [
+                (
+                    float(row["interval_start_s"]),
+                    float(row["interval_end_s"]),
+                    float(row["duration_s"]),
+                )
+                for row in rows
+            ],
+            [(0.0, 10.0, 10.0), (10.0, 30.0, 20.0), (30.0, 75.0, 45.0)],
+        )
 
     def test_cli_reports_temperature_dependent_resistance_range(self):
         standard_output = io.StringIO()
