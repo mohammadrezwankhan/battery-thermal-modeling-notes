@@ -34,6 +34,6 @@ Use a simple model for learning and quick screening. Move to condition-dependent
 
 The executable reference demonstrates the reversible term with a constant or
 piecewise-constant coefficient. The underlying equation is documented in the
-[NREL Li-Ion Battery Thermal Characterization report](https://www.nrel.gov/docs/fy24osti/89032.pdf).
+[NREL Li-Ion Battery Thermal Characterization paper](https://www.osti.gov/biblio/2349292).
 Use measured coefficients over the applicable SOC and temperature range before
 interpreting the term as cell-specific behavior.
