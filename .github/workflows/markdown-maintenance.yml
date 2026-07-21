@@ -42,6 +42,13 @@ jobs:
           --integration-method exact-linear
           --output-csv "$RUNNER_TEMP/reversible-heat-intervals.csv"
 
+      - name: Run variable cooling example
+        run: >-
+          python models/lumped_cell_thermal.py
+          --profile-csv models/data/variable_cooling_profile.csv
+          --integration-method exact-linear
+          --output-csv "$RUNNER_TEMP/variable-cooling-intervals.csv"
+
       - name: Check Markdown links
         uses: lycheeverse/lychee-action@v2
         with:
