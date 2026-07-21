@@ -7,7 +7,7 @@ Battery thermal models should use the simplest heat-generation representation th
 | Approach | Typical Form | Best Use | Limits To Document |
 |---|---|---|---|
 | Simple ohmic loss | `Q_dot = I^2 * R` | Early sizing, quick sensitivity checks, education examples. | Resistance value, temperature range, SOC range, pulse duration, and whether charge/discharge asymmetry is ignored. |
-| OCV / entropy-aware heat | Combines irreversible loss with reversible heat such as `I * T * dU/dT`. | Studies where SOC, temperature, or charge/discharge direction changes the thermal response. | Source of OCV curve, source of entropy coefficient, interpolation method, and sign convention. |
+| OCV / entropy-aware heat | Combines irreversible loss with reversible heat such as `-I * T * dU_oc/dT` for the stated positive-discharge convention. | Studies where SOC, temperature, or charge/discharge direction changes the thermal response. | Source of OCV curve, source of entropy coefficient, interpolation method, current direction, and sign convention. |
 | Measured or calorimetry-informed heat | Heat map or fitted model from measured cell behavior. | Design reviews, validation packs, high-power duty cycles, and thermal-management decisions. | Test conditions, cell age, C-rate range, temperature range, measurement uncertainty, and scaling from cell to module or pack. |
 
 ## Selection Guide
@@ -31,3 +31,9 @@ Battery thermal models should use the simplest heat-generation representation th
 ## Practical Rule
 
 Use a simple model for learning and quick screening. Move to condition-dependent or measured heat-generation inputs when the result affects BTMS architecture, safety margin, warranty discussion, or commissioning evidence.
+
+The executable reference demonstrates the reversible term with a constant or
+piecewise-constant coefficient. The underlying equation is documented in the
+[NREL Li-Ion Battery Thermal Characterization paper](https://www.osti.gov/biblio/2349292).
+Use measured coefficients over the applicable SOC and temperature range before
+interpreting the term as cell-specific behavior.

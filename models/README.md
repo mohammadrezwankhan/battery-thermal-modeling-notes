@@ -10,7 +10,9 @@ or safety qualification.
 For each time interval, the model evaluates:
 
 ```text
-Q_generation = I^2 R
+Q_irreversible = I^2 R
+Q_reversible = -I T_kelvin dU_oc/dT
+Q_generation = Q_irreversible + Q_reversible
 R(T) = R_ref [1 + alpha (T_cell - T_ref)]
 Q_rejection = h (T_cell - T_ambient)
 C_thermal dT/dt = Q_generation - Q_rejection
@@ -36,8 +38,8 @@ python models/lumped_cell_thermal.py `
 
 The default case represents a 75 A constant-current interval applied to a
 1.05 kg lumped cell with 1000 J/(kg K) specific heat, 4 mOhm resistance,
-zero resistance temperature coefficient, 1.2 W/K heat transfer, and 25 degC
-initial and ambient temperature.
+zero resistance temperature coefficient, zero entropic coefficient, 1.2 W/K
+heat transfer, and 25 degC initial and ambient temperature.
 
 Run the regression checks with:
 
@@ -56,13 +58,14 @@ python models/lumped_cell_thermal.py `
   --integration-method exact-linear
 ```
 
-With constant current and ambient over an interval, linear heat rejection and
-the configured linear resistance-temperature relation produce a linear ODE.
+With constant current, ambient, and entropic coefficient over an interval,
+linear heat rejection, reversible heat, and the configured linear
+resistance-temperature relation produce a linear ODE.
 The exact method evaluates its exponential solution with `expm1` for numerical
 stability. It also stores the exact net interval heat as thermal capacity times
-the temperature change. CSV `heat_generation_w`, `heat_rejection_w`, and
-`resistance_ohm` remain start-of-interval values; `net_heat_j` is the integrated
-interval quantity.
+the temperature change. CSV heat rates, `resistance_ohm`, and
+`entropic_coefficient_v_per_k` remain start-of-interval values; `net_heat_j` is
+the integrated interval quantity.
 
 The exact method removes integration error for this model equation, but it does
 not make piecewise-constant current, ambient, parameter, or one-node
@@ -93,8 +96,9 @@ python models/lumped_cell_thermal.py `
 ```
 
 The output records interval boundaries and duration, current, start/end
-temperature, ambient temperature, evaluated resistance, generated and rejected
-heat rates, and net interval heat.
+temperature, ambient temperature, evaluated resistance, entropic coefficient,
+irreversible, reversible, total generated and rejected heat rates, and net
+interval heat.
 Profile mode derives the time step from the CSV and rejects `--current-a`,
 `--duration-s`, or `--time-step-s` overrides.
 
@@ -137,6 +141,39 @@ simulation exposes every interval duration, cumulative time boundaries, and
 the total elapsed duration. Its `time_step_s` compatibility property returns
 the common duration for a uniform grid and `None` for a variable grid.
 
+## Reversible Entropic Heat
+
+Use `--entropic-coefficient-v-per-k` to add the reversible Bernardi heat term.
+This model defines positive current as discharge and evaluates
+`Q_reversible = -I * T_kelvin * dU_oc/dT`; therefore reversing current reverses
+the reversible term while `I^2 R` remains nonnegative. A positive coefficient
+produces reversible cooling during positive-current discharge and heating
+during negative-current charge under this convention.
+
+The equation and interpretation follow the electrode-sandwich heat balance in
+the [NREL Li-Ion Battery Thermal Characterization paper](https://www.osti.gov/biblio/2349292),
+which separates irreversible overpotential heat from reversible entropic heat.
+Coefficient sign and magnitude vary with chemistry, SOC, and test method, so
+replace the illustrative values with cell-specific measurements.
+
+Run the committed charge/discharge example with an interval-varying coefficient:
+
+```powershell
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/reversible_heat_current_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/reversible-heat-intervals.csv
+```
+
+The Python API accepts `entropic_coefficients_v_per_k` with one value per
+current interval. A profile may add `entropic_coefficient_v_per_k` after the
+optional duration and ambient columns, allowing an externally prepared
+SOC-dependent coefficient schedule without claiming an electrical SOC model.
+Every result preserves the coefficient and separate irreversible, reversible,
+and total heat-source traces. For exact-linear integration, all reported heat
+rates are start-of-interval values while `net_heat_j` remains the exact
+integrated thermal-energy change.
+
 ## Temperature-Dependent Resistance
 
 Set `--resistance-temperature-coefficient-per-k` to evaluate a linear
@@ -170,8 +207,9 @@ window before engineering use.
 
 - Resistance may use an optional linear temperature coefficient, but it does
   not vary with SOC or age and does not represent a nonlinear measured map.
-- Heat generation contains irreversible ohmic loss only.
-- Reversible entropic heat is excluded.
+- Reversible heat uses a supplied constant or piecewise-constant entropic
+  coefficient; the model does not derive its SOC or chemistry dependence.
+- Mixing, phase-change, side-reaction, and interconnect heat are excluded.
 - The cell is represented by one uniform temperature state.
 - Heat transfer is linear; ambient may vary by interval, but the heat-transfer
   coefficient remains fixed.

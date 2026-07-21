@@ -35,6 +35,13 @@ jobs:
       - name: Test executable models
         run: python -m unittest discover -s tests -v
 
+      - name: Run reversible heat example
+        run: >-
+          python models/lumped_cell_thermal.py
+          --profile-csv models/data/reversible_heat_current_profile.csv
+          --integration-method exact-linear
+          --output-csv "$RUNNER_TEMP/reversible-heat-intervals.csv"
+
       - name: Check Markdown links
         uses: lycheeverse/lychee-action@v2
         with:
