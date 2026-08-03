@@ -5,6 +5,14 @@
 Research-backed notes and reproducible examples for battery thermal behavior,
 BTMS design thinking, and validation assumptions.
 
+## Documentation Map
+
+- [Starter notes](#starter-notes) for the source-backed reading path.
+- [Executable reference](#run-the-executable-reference) for a dependency-free model run.
+- [Model assumptions and limitations](models/README.md) before reusing parameters or outputs.
+- [Contribution entry points](#contribution-entry-points) for focused improvements.
+- [Citation metadata](CITATION.cff) and [license](LICENSE) for shared work.
+
 ## Focus Areas
 
 - Battery heat generation and thermal pathways.
@@ -87,6 +95,7 @@ figures/
 references/
 README.md
 CONTRIBUTING.md
+CITATION.cff
 LICENSE
 ```
 
@@ -146,6 +155,21 @@ external heat sources and heat-transfer coefficients, explicit nonuniform
 interval durations, optional diffuse-gray radiation, and interval-level CSV
 results. Repeatable temperature limits add first-crossing, exposure-duration,
 and peak-margin summaries without changing the thermal integration.
+
+## Scope and Limitations
+
+This repository is a research and teaching reference. Its notes, templates, and
+executable examples do not certify thermal runaway behavior, cell safety, BTMS
+performance, product compliance, or an operational temperature limit. Replace
+illustrative parameters with traceable project data and obtain independent
+engineering, safety, and standards review before making a design or field
+decision.
+
+## Citation
+
+If these notes or models support a paper, report, lecture, or design review, use
+the machine-readable [CITATION.cff](CITATION.cff) metadata and cite the specific
+note, model version, data source, and assumptions used.
 
 ## Contribution Entry Points
 
