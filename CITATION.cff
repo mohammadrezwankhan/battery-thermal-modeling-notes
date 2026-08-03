@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use these notes or models in research or teaching, please cite this repository."
+type: software
+title: "Battery Thermal Modeling Notes"
+authors:
+  - family-names: Khan
+    given-names: Mohammad Rezwan
+    orcid: "https://orcid.org/0000-0002-1532-0598"
+repository-code: "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes"
+url: "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes"
+license: MIT
+keywords:
+  - battery thermal management
+  - BTMS
+  - heat generation
+  - thermal model validation
