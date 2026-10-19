@@ -1,0 +1,93 @@
+{
+  "repository": "battery-thermal-modeling-notes",
+  "domain": "DOMAIN_A",
+  "title": "Battery Thermal Modeling Notes",
+  "version": "2.0.0",
+  "author": "Mohammad Rezwan Khan",
+  "lessons": [
+    {
+      "id": "L01",
+      "title": "Bernardi Reversible & Irreversible Heat Generation Modeling",
+      "level": "Beginner",
+      "duration": "30 mins",
+      "config_file": "parameters/bernardi_heat_spec.m",
+      "summary": "Derive total heat flux Q_dot = I(V_ocv - V) - I*T*(dVocv/dT) separating entropic reversible cooling/heating from Joule resistance dissipation.",
+      "inputs": [
+        "Cell current profile I(t)",
+        "Entropic coefficient dU/dT lookup curve vs SOC"
+      ],
+      "parameters": {
+        "CellCapacity_Ah": 60.0,
+        "EntropicCoeff_mV_K": -0.22,
+        "NominalResistance_mohm": 0.95
+      },
+      "checkpoints": [
+        "Observe entropic cooling during early charge phase",
+        "Validate total heat generation against calorimeter lab data"
+      ]
+    },
+    {
+      "id": "L02",
+      "title": "1D Lumped-Capacitance vs. Multi-Node Thermal Networks",
+      "level": "Intermediate",
+      "duration": "45 mins",
+      "config_file": "parameters/thermal_network_1d.m",
+      "summary": "Evaluate Biot number criteria (Bi < 0.1) and quantify core-to-surface thermal lag in large-format prismatic and pouch cells.",
+      "inputs": [
+        "Cylindrical 4680 cell dimensions (r=23mm, h=80mm)",
+        "Radial thermal conductivity kr = 0.8 W/m-K"
+      ],
+      "parameters": {
+        "HeatCapacity_J_kgK": 1050.0,
+        "CoreToSurfaceConductance_W_K": 2.8,
+        "SurfaceToAmbient_h_W_m2K": 25.0
+      },
+      "checkpoints": [
+        "Calculate Biot number Bi = 0.38 requiring 2-node model",
+        "Plot core vs skin temperature divergence at 4C continuous"
+      ]
+    },
+    {
+      "id": "L03",
+      "title": "Liquid Cooling Plate Flow Velocity, Reynolds Number & Pressure Drop",
+      "level": "Advanced",
+      "duration": "60 mins",
+      "config_file": "parameters/coldplate_hydraulics.m",
+      "summary": "Calculate friction factor (Darcy-Weisbach) and convective heat transfer coefficient across mini-channel cold plates.",
+      "inputs": [
+        "Extruded aluminum channel geometry",
+        "Coolant: 50% Ethylene Glycol / 50% Water"
+      ],
+      "parameters": {
+        "HydraulicDiameter_mm": 3.8,
+        "FlowRate_L_min": 6.5,
+        "DynamicViscosity_Pa_s": 0.0032
+      },
+      "checkpoints": [
+        "Verify laminar-to-turbulent transition safety margin",
+        "Ensure pressure drop remains below pump head capacity 35 kPa"
+      ]
+    },
+    {
+      "id": "L04",
+      "title": "Direct Immersion Dielectric Cooling vs. Bottom-Plate Benchmarking",
+      "level": "Production",
+      "duration": "75 mins",
+      "config_file": "parameters/immersion_vs_plate.m",
+      "summary": "Comparative trade-off matrix: pumping power, heat rejection efficiency, thermal runaway barrier, and overall pack gravimetric density.",
+      "inputs": [
+        "Synthetic dielectric fluid (hydrocarbon/fluorochemical)",
+        "Uniform pack thermal load 4.8 kW"
+      ],
+      "parameters": {
+        "DielectricDielectricBreakdown_kV": 40.0,
+        "FluidViscosity_cSt": 5.0,
+        "CoolingEffectivenessRatio": 1.78
+      },
+      "checkpoints": [
+        "Demonstrate 60% reduction in cell-to-cell delta T with immersion",
+        "Quantify weight penalty vs thermal runway containment gain"
+      ]
+    }
+  ]
+}
