@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "repository": "mohammadrezwankhan/battery-thermal-modeling-notes",
+  "display_name": "Battery Thermal Modeling",
+  "description": "Battery thermal models, assumption registers and reproducible learning paths with explicit validation boundaries.",
+  "domain": "DOMAIN_D",
+  "theme": {
+    "accent": "#FF6D00",
+    "secondary": "#00B0FF",
+    "surface": "#1A1412",
+    "glow": "rgba(255, 109, 0, 0.35)",
+    "label": "Simulation & digital twins",
+    "short": "Simulation"
+  },
+  "repo_type": "research-notes-and-reference-model",
+  "source_revision": "573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+  "source_snapshot_date": "2026-10-19",
+  "repo_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes",
+  "homepage": "https://mrkhan.co.technology/models/battery-thermal-modeling-notes/",
+  "upstream": null,
+  "lessons": [
+    {
+      "id": "path-01",
+      "title": "Establish thermal assumptions and provenance",
+      "summary": "Read cell/system assumptions and a sourced thermal-characterization reading note.",
+      "objective": "Record units, initial/boundary conditions and parameter sources.",
+      "checkpoint": "Identify which inputs are measured, sourced or illustrative before interpreting a thermal trace.",
+      "level": "Foundation",
+      "tags": [
+        "foundations",
+        "engineering",
+        "thermal",
+        "data-provenance",
+        "uncertainty"
+      ],
+      "source_paths": [
+        "notes/modeling-assumptions.md",
+        "references/reading-log-nrel-li-ion-thermal-characterization.md",
+        "templates/thermal-parameter-traceability-matrix.md"
+      ],
+      "source_urls": [
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/notes/modeling-assumptions.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/references/reading-log-nrel-li-ion-thermal-characterization.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/templates/thermal-parameter-traceability-matrix.md"
+      ],
+      "parameters": [],
+      "command": null,
+      "native_id": null,
+      "native_route": null,
+      "execution_status": "source-linked guide; no execution by this dashboard"
+    },
+    {
+      "id": "path-02",
+      "title": "Inspect the constant-current reference",
+      "summary": "Follow the one-node balance and exact-linear option for a fixed current interval.",
+      "objective": "Relate heat generation, effective cooling and thermal capacitance to temperature response.",
+      "checkpoint": "The exact-linear method removes discretization error for its stated linear equation, not error in the one-node physical assumptions.",
+      "level": "Foundation",
+      "tags": [
+        "foundations",
+        "engineering",
+        "thermal"
+      ],
+      "source_paths": [
+        "models/README.md",
+        "models/lumped_cell_thermal.py"
+      ],
+      "source_urls": [
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/README.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/lumped_cell_thermal.py"
+      ],
+      "parameters": [
+        {
+          "name": "mass_kg",
+          "description": "Lumped cell mass",
+          "default": 1.05,
+          "unit": "kg",
+          "source_path": "models/lumped_cell_thermal.py",
+          "definition_basis": "documented_or_source_default"
+        },
+        {
+          "name": "specific_heat_j_per_kg_k",
+          "description": "Specific heat capacity",
+          "default": 1000.0,
+          "unit": "J/(kg K)",
+          "source_path": "models/lumped_cell_thermal.py",
+          "definition_basis": "documented_or_source_default"
+        },
+        {
+          "name": "resistance_ohm",
+          "description": "Reference electrical resistance",
+          "default": 0.004,
+          "unit": "ohm",
+          "source_path": "models/lumped_cell_thermal.py",
+          "definition_basis": "documented_or_source_default"
+        },
+        {
+          "name": "heat_transfer_w_per_k",
+          "description": "Effective convective thermal conductance",
+          "default": 1.2,
+          "unit": "W/K",
+          "source_path": "models/lumped_cell_thermal.py",
+          "definition_basis": "documented_or_source_default"
+        }
+      ],
+      "command": "python models/lumped_cell_thermal.py --current-a 75 --duration-s 600 --time-step-s 600 --integration-method exact-linear",
+      "native_id": null,
+      "native_route": null,
+      "execution_status": "source-linked guide; no execution by this dashboard"
+    },
+    {
+      "id": "path-03",
+      "title": "Inspect interval profiles and thermal boundaries",
+      "summary": "Compare irregular current intervals with independent convection and radiative-surroundings profiles.",
+      "objective": "Preserve interval timing and distinguish current, ambient and radiative inputs.",
+      "checkpoint": "Confirm contiguous positive interval durations; enabled radiation requires RK4 and positive paired emissivity/area rather than exact-linear integration.",
+      "level": "Applied",
+      "tags": [
+        "application",
+        "engineering",
+        "thermal",
+        "data-provenance",
+        "uncertainty"
+      ],
+      "source_paths": [
+        "models/data/irregular_current_profile.csv",
+        "models/data/radiative_cooling_profile.csv",
+        "models/README.md",
+        "models/lumped_cell_thermal.py"
+      ],
+      "source_urls": [
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/data/irregular_current_profile.csv",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/data/radiative_cooling_profile.csv",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/README.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/models/lumped_cell_thermal.py"
+      ],
+      "parameters": [
+        {
+          "name": "time_s",
+          "description": "CSV interval-start timestamp",
+          "default": null,
+          "unit": "s",
+          "source_path": "models/data/irregular_current_profile.csv",
+          "definition_basis": "documented_or_source_default"
+        },
+        {
+          "name": "duration_s",
+          "description": "CSV interval duration; rows must be contiguous",
+          "default": null,
+          "unit": "s",
+          "source_path": "models/data/irregular_current_profile.csv",
+          "definition_basis": "documented_or_source_default"
+        },
+        {
+          "name": "ambient_temperature_c",
+          "description": "CSV convection-boundary temperature",
+          "default": null,
+          "unit": "degC",
+          "source_path": "models/data/irregular_current_profile.csv",
+          "definition_basis": "documented_or_source_default"
+        }
+      ],
+      "command": "python models/lumped_cell_thermal.py --profile-csv models/data/irregular_current_profile.csv --integration-method exact-linear --output-csv results/irregular_thermal_intervals.csv",
+      "native_id": null,
+      "native_route": null,
+      "execution_status": "source-linked guide; no execution by this dashboard"
+    },
+    {
+      "id": "path-04",
+      "title": "Review limits and validation evidence",
+      "summary": "Inspect temperature-limit tests and complete an evidence-led validation checklist.",
+      "objective": "Distinguish code verification and threshold reporting from safety qualification.",
+      "checkpoint": "Link a limit crossing or model claim to a test, documented assumptions and project-controlled evidence; do not infer a safe operating limit from a default.",
+      "level": "Applied",
+      "tags": [
+        "application",
+        "engineering",
+        "thermal",
+        "validation",
+        "evidence"
+      ],
+      "source_paths": [
+        "tests/test_lumped_cell_thermal.py",
+        "templates/validation-checklist.md",
+        "templates/thermal-validation-decision-log.md",
+        "notes/thermal-model-limitations.md"
+      ],
+      "source_urls": [
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/tests/test_lumped_cell_thermal.py",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/templates/validation-checklist.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/templates/thermal-validation-decision-log.md",
+        "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/notes/thermal-model-limitations.md"
+      ],
+      "parameters": [],
+      "command": "python -m unittest discover -s tests -v",
+      "native_id": null,
+      "native_route": null,
+      "execution_status": "source-linked guide; no execution by this dashboard"
+    }
+  ]
+}

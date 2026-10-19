@@ -1,0 +1,29 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "name": "Battery Thermal Modeling Notes",
+  "codeRepository": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes",
+  "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes",
+  "author": [
+    {
+      "@type": "Person",
+      "familyName": "Khan",
+      "givenName": "Mohammad Rezwan",
+      "@id": "https://orcid.org/0000-0002-1532-0598"
+    }
+  ],
+  "readme": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/HEAD/README.md",
+  "issueTracker": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/issues",
+  "continuousIntegration": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions",
+  "relatedLink": [
+    "https://rezwankhan.tech/",
+    "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/HEAD/CITATION.cff"
+  ],
+  "keywords": [
+    "battery thermal management",
+    "BTMS",
+    "heat generation",
+    "thermal model validation"
+  ],
+  "license": "https://spdx.org/licenses/MIT.html"
+}

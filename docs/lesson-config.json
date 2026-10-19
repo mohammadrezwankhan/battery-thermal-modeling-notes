@@ -1,93 +1,313 @@
 {
-  "repository": "battery-thermal-modeling-notes",
-  "domain": "DOMAIN_A",
-  "title": "Battery Thermal Modeling Notes",
-  "version": "2.0.0",
-  "author": "Mohammad Rezwan Khan",
-  "lessons": [
+  "$schema": "./lesson-config.schema.json",
+  "schema_version": "1.0",
+  "repository": {
+    "owner": "mohammadrezwankhan",
+    "slug": "battery-thermal-modeling-notes",
+    "name": "battery-thermal-modeling-notes",
+    "title": "Battery Thermal Reasoning Lab",
+    "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes",
+    "default_branch": "main",
+    "description": "Trace battery heat-generation assumptions, compare cooling boundaries & reproduce a transparent one-node energy balance.",
+    "summary": "Research notes and templates accompany a dependency-free thermal model with selectable integration methods and heat terms. The browser isolates the simplest linear balance before returning to the richer native reference.",
+    "audience": "Battery and BTMS learners reviewing heat sources, boundaries, numerical methods, and validation evidence.",
+    "topics": [
+      "battery",
+      "battery-thermal-management",
+      "thermal-modeling",
+      "btms",
+      "heat-transfer",
+      "battery-modeling",
+      "electric-vehicles",
+      "lithium-ion-battery",
+      "python",
+      "matlab",
+      "research-notes",
+      "model-validation",
+      "energy-balance",
+      "uncertainty-quantification",
+      "engineering-education"
+    ],
+    "source_paths": [
+      "README.md",
+      "models/README.md",
+      "models/lumped_cell_thermal.py",
+      "models/data/pulse_current_profile.csv",
+      "models/data/variable_cooling_profile.csv",
+      "notes/modeling-assumptions.md",
+      "templates/thermal-parameter-traceability-matrix.md",
+      "tests/test_lumped_cell_thermal.py"
+    ],
+    "is_fork": false,
+    "upstream": null
+  },
+  "domain": {
+    "id": "A",
+    "name": "Energy systems",
+    "primary": "#00E5FF",
+    "secondary": "#00E676",
+    "surface": "#0A192F",
+    "glow": "rgba(0,229,255,0.35)"
+  },
+  "model": {
+    "title": "Thermal assumptions · transient versus steady state",
+    "timeUnit": "min",
+    "horizon": 60,
+    "parameters": [
+      {
+        "key": "heatW",
+        "label": "Heat input",
+        "unit": "W",
+        "min": 100,
+        "max": 3000,
+        "step": 100,
+        "default": 1200,
+        "calibration": "Illustrative input; verified against the declared analytical model, not field measurements."
+      },
+      {
+        "key": "coolingWK",
+        "label": "Heat transfer",
+        "unit": "W/K",
+        "min": 10,
+        "max": 120,
+        "step": 5,
+        "default": 40,
+        "calibration": "Illustrative input; verified against the declared analytical model, not field measurements."
+      },
+      {
+        "key": "capacityJPerK",
+        "label": "Thermal capacity",
+        "unit": "J/K",
+        "min": 3000,
+        "max": 60000,
+        "step": 1000,
+        "default": 18000,
+        "calibration": "Illustrative input; verified against the declared analytical model, not field measurements."
+      },
+      {
+        "key": "ambientC",
+        "label": "Ambient temperature",
+        "unit": "°C",
+        "min": 0,
+        "max": 45,
+        "step": 1,
+        "default": 25,
+        "calibration": "Illustrative input; verified against the declared analytical model, not field measurements."
+      }
+    ],
+    "metrics": [
+      {
+        "key": "temperatureC",
+        "label": "Body temperature",
+        "unit": "°C",
+        "decimals": 1
+      },
+      {
+        "key": "heatRemovedW",
+        "label": "Heat removed",
+        "unit": "W",
+        "decimals": 0
+      },
+      {
+        "key": "storedEnergyKJ",
+        "label": "Stored heat",
+        "unit": "kJ",
+        "decimals": 1
+      },
+      {
+        "key": "residualW",
+        "label": "Net heating",
+        "unit": "W",
+        "decimals": 0
+      }
+    ],
+    "equation": "ΔT = (Q/h) · (1 − exp(−h · 60t/C)); T = Tₐ + ΔT; heat removed = hΔT; stored heat = CΔT/1000.",
+    "assumptions": [
+      "One uniform thermal mass starts at ambient temperature.",
+      "Constant heat input and linear heat transfer; no phase change or spatial gradients.",
+      "Elapsed time is shown in minutes; the energy-balance calculation uses seconds.",
+      "The browser starts at ambient and uses constant heat and convection; parameters are not fitted to a named cell.",
+      "The native model’s explicit Euler, exact-linear, and RK4 methods have different valid use cases; the browser uses only a closed form.",
+      "A calculated temperature or limit crossing does not establish thermal-runaway behavior or a safe operating limit."
+    ],
+    "kind": "thermal",
+    "introduction": "This exact one-node linear response is a warmup for the native model’s scheduled boundaries, entropic heat, temperature feedback, radiation, and integration options. Those additional terms are not active in the browser.",
+    "calibration_status": "Uncalibrated synthetic teaching proxy"
+  },
+  "modules": [
     {
-      "id": "L01",
-      "title": "Bernardi Reversible & Irreversible Heat Generation Modeling",
-      "level": "Beginner",
-      "duration": "30 mins",
-      "config_file": "parameters/bernardi_heat_spec.m",
-      "summary": "Derive total heat flux Q_dot = I(V_ocv - V) - I*T*(dVocv/dT) separating entropic reversible cooling/heating from Joule resistance dissipation.",
-      "inputs": [
-        "Cell current profile I(t)",
-        "Entropic coefficient dU/dT lookup curve vs SOC"
+      "id": "module-1",
+      "title": "Declare the thermal control volume",
+      "objective": "Identify heat input, heat rejection, and stored energy before reading a temperature curve.",
+      "minutes": 12,
+      "steps": [
+        "Read the governing balance in models/README.md.",
+        "Apply 1,200 W heat, 40 W/K conductance, 18,000 J/K capacity, and 25°C ambient.",
+        "Predict the 30 K steady rise and inspect the temperature and heat stored after ten minutes."
       ],
-      "parameters": {
-        "CellCapacity_Ah": 60.0,
-        "EntropicCoeff_mV_K": -0.22,
-        "NominalResistance_mohm": 0.95
+      "preset": {
+        "heatW": 1200,
+        "coolingWK": 40,
+        "capacityJPerK": 18000,
+        "ambientC": 25
       },
       "checkpoints": [
-        "Observe entropic cooling during early charge phase",
-        "Validate total heat generation against calorimeter lab data"
-      ]
+        {
+          "label": "Ten-minute temperature",
+          "metric": "temperatureC",
+          "operator": "==",
+          "expected": 47.092086,
+          "tolerance": 0.02,
+          "atTime": 10
+        },
+        {
+          "label": "Ten-minute stored thermal energy",
+          "metric": "storedEnergyKJ",
+          "operator": "==",
+          "expected": 397.657545,
+          "tolerance": 0.02,
+          "atTime": 10
+        }
+      ],
+      "reflection": "Which physical volume does the lumped temperature represent, and what measurement could test that interpretation?",
+      "source_paths": [
+        "models/README.md",
+        "notes/modeling-assumptions.md"
+      ],
+      "level": "Foundation"
     },
     {
-      "id": "L02",
-      "title": "1D Lumped-Capacitance vs. Multi-Node Thermal Networks",
-      "level": "Intermediate",
-      "duration": "45 mins",
-      "config_file": "parameters/thermal_network_1d.m",
-      "summary": "Evaluate Biot number criteria (Bi < 0.1) and quantify core-to-surface thermal lag in large-format prismatic and pouch cells.",
-      "inputs": [
-        "Cylindrical 4680 cell dimensions (r=23mm, h=80mm)",
-        "Radial thermal conductivity kr = 0.8 W/m-K"
+      "id": "module-2",
+      "title": "Change thermal inertia alone",
+      "objective": "Distinguish a slower transient from a lower steady temperature.",
+      "minutes": 15,
+      "steps": [
+        "Keep heat, conductance, and ambient fixed.",
+        "Double thermal capacity to 36,000 J/K and predict the ten-minute response.",
+        "Scrub toward sixty minutes and explain why the same steady-state rise is approached more slowly."
       ],
-      "parameters": {
-        "HeatCapacity_J_kgK": 1050.0,
-        "CoreToSurfaceConductance_W_K": 2.8,
-        "SurfaceToAmbient_h_W_m2K": 25.0
+      "preset": {
+        "heatW": 1200,
+        "coolingWK": 40,
+        "capacityJPerK": 36000,
+        "ambientC": 25
       },
       "checkpoints": [
-        "Calculate Biot number Bi = 0.38 requiring 2-node model",
-        "Plot core vs skin temperature divergence at 4C continuous"
-      ]
+        {
+          "label": "Higher-inertia temperature after ten minutes",
+          "metric": "temperatureC",
+          "operator": "==",
+          "expected": 39.597486,
+          "tolerance": 0.02,
+          "atTime": 10
+        },
+        {
+          "label": "Residual net heating after ten minutes",
+          "metric": "residualW",
+          "operator": "==",
+          "expected": 616.100543,
+          "tolerance": 0.02,
+          "atTime": 10
+        }
+      ],
+      "reflection": "What mass and specific-heat evidence would you place in the parameter traceability matrix?",
+      "source_paths": [
+        "models/lumped_cell_thermal.py",
+        "templates/thermal-parameter-traceability-matrix.md"
+      ],
+      "level": "Parameter study"
     },
     {
-      "id": "L03",
-      "title": "Liquid Cooling Plate Flow Velocity, Reynolds Number & Pressure Drop",
-      "level": "Advanced",
-      "duration": "60 mins",
-      "config_file": "parameters/coldplate_hydraulics.m",
-      "summary": "Calculate friction factor (Darcy-Weisbach) and convective heat transfer coefficient across mini-channel cold plates.",
-      "inputs": [
-        "Extruded aluminum channel geometry",
-        "Coolant: 50% Ethylene Glycol / 50% Water"
+      "id": "module-3",
+      "title": "Move the boundary without changing generation",
+      "objective": "Separate ambient temperature from heat input and heat-transfer conductance.",
+      "minutes": 15,
+      "steps": [
+        "Return capacity to 18,000 J/K and raise ambient from 25°C to 40°C.",
+        "Predict the change in absolute temperature and whether stored heat above ambient changes.",
+        "Read the variable-cooling profile to see how the native reference can schedule boundary changes by interval."
       ],
-      "parameters": {
-        "HydraulicDiameter_mm": 3.8,
-        "FlowRate_L_min": 6.5,
-        "DynamicViscosity_Pa_s": 0.0032
+      "preset": {
+        "heatW": 1200,
+        "coolingWK": 40,
+        "capacityJPerK": 18000,
+        "ambientC": 40
       },
       "checkpoints": [
-        "Verify laminar-to-turbulent transition safety margin",
-        "Ensure pressure drop remains below pump head capacity 35 kPa"
-      ]
+        {
+          "label": "Hot-boundary temperature after ten minutes",
+          "metric": "temperatureC",
+          "operator": "==",
+          "expected": 62.092086,
+          "tolerance": 0.02,
+          "atTime": 10
+        },
+        {
+          "label": "Heat above ambient retains the same ten-minute value",
+          "metric": "storedEnergyKJ",
+          "operator": "==",
+          "expected": 397.657545,
+          "tolerance": 0.02,
+          "atTime": 10
+        }
+      ],
+      "reflection": "Why should a radiative-surroundings temperature be recorded separately from convective ambient temperature?",
+      "source_paths": [
+        "models/README.md",
+        "models/data/variable_cooling_profile.csv",
+        "tests/test_lumped_cell_thermal.py"
+      ],
+      "level": "Stress test"
     },
     {
-      "id": "L04",
-      "title": "Direct Immersion Dielectric Cooling vs. Bottom-Plate Benchmarking",
-      "level": "Production",
-      "duration": "75 mins",
-      "config_file": "parameters/immersion_vs_plate.m",
-      "summary": "Comparative trade-off matrix: pumping power, heat rejection efficiency, thermal runaway barrier, and overall pack gravimetric density.",
-      "inputs": [
-        "Synthetic dielectric fluid (hydrocarbon/fluorochemical)",
-        "Uniform pack thermal load 4.8 kW"
+      "id": "module-4",
+      "title": "Choose a model and verification path",
+      "objective": "Decide which terms and numerical checks the next engineering question requires.",
+      "minutes": 18,
+      "steps": [
+        "Double conductance to 80 W/K at 25°C while retaining 1,200 W and 18,000 J/K.",
+        "Verify the 30-minute result and near-zero net heating.",
+        "Use the native model guide to decide between exact-linear integration and RK4 when adding nonlinear surface radiation."
       ],
-      "parameters": {
-        "DielectricDielectricBreakdown_kV": 40.0,
-        "FluidViscosity_cSt": 5.0,
-        "CoolingEffectivenessRatio": 1.78
+      "preset": {
+        "heatW": 1200,
+        "coolingWK": 80,
+        "capacityJPerK": 18000,
+        "ambientC": 25
       },
       "checkpoints": [
-        "Demonstrate 60% reduction in cell-to-cell delta T with immersion",
-        "Quantify weight penalty vs thermal runway containment gain"
-      ]
+        {
+          "label": "Cooling-case temperature after thirty minutes",
+          "metric": "temperatureC",
+          "operator": "==",
+          "expected": 39.994968,
+          "tolerance": 0.02,
+          "atTime": 30
+        },
+        {
+          "label": "Residual net heating is below 1 W",
+          "metric": "residualW",
+          "operator": "<",
+          "expected": 1,
+          "tolerance": 0.02,
+          "atTime": 30
+        }
+      ],
+      "reflection": "Draft a verification plan covering equilibrium, signs, conservation, step-size convergence, and the measurements still needed for validation.",
+      "source_paths": [
+        "models/README.md",
+        "models/lumped_cell_thermal.py",
+        "tests/test_lumped_cell_thermal.py"
+      ],
+      "level": "Transfer to source"
     }
-  ]
+  ],
+  "source": {
+    "commit": "573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+    "audited_at": "2026-10-19T08:39:24Z",
+    "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/tree/573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+    "calibration_status": "synthetic-analytical-fixtures",
+    "scope": "This browser lab is a standalone teaching approximation. Use the linked source for the project implementation."
+  },
+  "dashboard_url": "https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/"
 }

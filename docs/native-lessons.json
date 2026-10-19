@@ -1,0 +1,969 @@
+{
+  "schema_version": 1,
+  "repository": {
+    "name": "battery-thermal-modeling-notes",
+    "name_with_owner": "mohammadrezwankhan/battery-thermal-modeling-notes",
+    "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes"
+  },
+  "native_source": {
+    "commit": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+    "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/tree/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+    "source_path_override": null
+  },
+  "browser_lab_package_provenance": {
+    "commit": "573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+    "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/tree/573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+    "scope": "This browser lab is a standalone teaching approximation. Use the linked source for the project implementation.",
+    "calibration_status": "synthetic-analytical-fixtures",
+    "config_path": "docs/lesson-config.json"
+  },
+  "native_catalog_source": "Tracked Markdown in source lesson, example, study-case, concept, model, and documentation paths.",
+  "native_material_count": 20,
+  "reproduction_command_count": 1,
+  "materials": [
+    {
+      "id": "doc-d445a8cf0940",
+      "title": "Reading Log Template",
+      "path": "references/reading-log-template.md",
+      "line": 1,
+      "source_paths": [
+        "references/reading-log-template.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/references/reading-log-template.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this template for public paper or technical-report notes. Do not copy copyrighted text; summarize in your own words.",
+      "type": "Native reading",
+      "section": "question",
+      "tags": [
+        "native-reading"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-85134aef54b2",
+      "title": "Heat-Generation Model Selection",
+      "path": "notes/heat-generation-model-selection.md",
+      "line": 1,
+      "source_paths": [
+        "notes/heat-generation-model-selection.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/heat-generation-model-selection.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Battery thermal models should use the simplest heat-generation representation that can answer the engineering question without hiding important operating-condition effects.",
+      "type": "Native reading",
+      "section": "equations",
+      "tags": [
+        "model"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-0c3ccef89e14",
+      "title": "Lumped Cell Thermal Reference",
+      "path": "models/README.md",
+      "line": 1,
+      "source_paths": [
+        "models/README.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/models/README.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "This dependency-free Python model turns the repository's simplest documented",
+      "type": "Native reading",
+      "section": "equations",
+      "tags": [
+        "model"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-2abd4a1a6888",
+      "title": "Reading Log: Li-Ion Battery Thermal Characterization for Thermal Management Design",
+      "path": "references/reading-log-nrel-li-ion-thermal-characterization.md",
+      "line": 1,
+      "source_paths": [
+        "references/reading-log-nrel-li-ion-thermal-characterization.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/references/reading-log-nrel-li-ion-thermal-characterization.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Title: Li-Ion Battery Thermal Characterization for Thermal Management Design",
+      "type": "Native reading",
+      "section": "equations",
+      "tags": [
+        "model"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-8ec9a00bfd09",
+      "title": "Battery Thermal Modeling Notes",
+      "path": "README.md",
+      "line": 1,
+      "source_paths": [
+        "README.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/573e04d53ee0cc06f17d9984c432daad2e7bf5e6/README.md#L1",
+      "source_revision": "573e04d53ee0cc06f17d9984c432daad2e7bf5e6",
+      "source_kind": "historical-reconciled-readme",
+      "source_label": "Historical README/source guide at 573e04d53ee0",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Research-backed notes and reproducible examples for battery thermal behavior,",
+      "type": "Native overview",
+      "section": "reproduce",
+      "tags": [
+        "model",
+        "native-lesson",
+        "reproduction"
+      ],
+      "track": null,
+      "lesson_id": null,
+      "source_blob_path": "README.md",
+      "source_blob_sha256": "3a9987db183abc3961a89af847aaffbeadb05afd8af123e7c5a1d9abb76dad83",
+      "source_blob_retrieval": "git-show",
+      "source_blob_cache": null
+    },
+    {
+      "id": "doc-03fbfb619a17",
+      "title": "BTMS Architecture Comparison",
+      "path": "notes/btms-architecture-comparison.md",
+      "line": 1,
+      "source_paths": [
+        "notes/btms-architecture-comparison.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/btms-architecture-comparison.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Battery thermal management system (BTMS) choices should be compared against the operating profile, packaging constraints, service model, safety concept, and validation evidence available for the project.",
+      "type": "Native reading",
+      "section": "verification",
+      "tags": [
+        "model",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-608b31388b47",
+      "title": "Thermal Validation Example Result Summary",
+      "path": "notes/thermal-validation-example-result-summary.md",
+      "line": 1,
+      "source_paths": [
+        "notes/thermal-validation-example-result-summary.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-validation-example-result-summary.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this note as a compact example for reporting thermal model results with enough context for review. Values below are placeholders and should be replaced with project, lab, or literature-backed data.",
+      "type": "Native lesson / example",
+      "section": "verification",
+      "tags": [
+        "model",
+        "native-lesson",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-82f7435129f7",
+      "title": "Battery Thermal Modeling Assumptions",
+      "path": "notes/modeling-assumptions.md",
+      "line": 1,
+      "source_paths": [
+        "notes/modeling-assumptions.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/modeling-assumptions.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "This note captures assumptions that should be stated before presenting battery thermal simulation results.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-0b59401dc2b7",
+      "title": "Cell To Pack Scaling Note",
+      "path": "notes/cell-to-pack-scaling-note.md",
+      "line": 1,
+      "source_paths": [
+        "notes/cell-to-pack-scaling-note.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/cell-to-pack-scaling-note.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for recording the assumptions used when cell-level thermal behavior is scaled to module or pack level. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-07d99520d441",
+      "title": "Cooling Strategy Trade Study",
+      "path": "notes/cooling-strategy-trade-study.md",
+      "line": 1,
+      "source_paths": [
+        "notes/cooling-strategy-trade-study.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/cooling-strategy-trade-study.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for comparing passive, air, liquid, and hybrid thermal management options at concept level. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-245b65b32857",
+      "title": "Heat Rejection Pathway Map",
+      "path": "notes/heat-rejection-pathway-map.md",
+      "line": 1,
+      "source_paths": [
+        "notes/heat-rejection-pathway-map.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/heat-rejection-pathway-map.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for mapping the path from cell heat generation to the final heat sink in thermal notes. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-ee3f7f38b9ad",
+      "title": "Literature Claim Extraction Template",
+      "path": "references/literature-claim-extraction-template.md",
+      "line": 1,
+      "source_paths": [
+        "references/literature-claim-extraction-template.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/references/literature-claim-extraction-template.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for extracting source-backed thermal claims from public literature without losing context. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-de3ae85274ab",
+      "title": "Research Next Questions Log",
+      "path": "references/research-next-questions-log.md",
+      "line": 1,
+      "source_paths": [
+        "references/research-next-questions-log.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/references/research-next-questions-log.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for capturing the next public-literature and validation questions raised by thermal notes. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-3630e371fdab",
+      "title": "Temperature Limit Rationale Note",
+      "path": "notes/temperature-limit-rationale-note.md",
+      "line": 1,
+      "source_paths": [
+        "notes/temperature-limit-rationale-note.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/temperature-limit-rationale-note.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for documenting why temperature limits were selected and what evidence supports them. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-c1a19e2effd4",
+      "title": "Thermal Assumptions Example Table",
+      "path": "notes/thermal-assumptions-example-table.md",
+      "line": 1,
+      "source_paths": [
+        "notes/thermal-assumptions-example-table.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-assumptions-example-table.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this table as a compact example for documenting battery thermal model assumptions before sharing plots, simulation results, or design claims.",
+      "type": "Native lesson / example",
+      "section": "scope",
+      "tags": [
+        "model",
+        "native-lesson",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-bc2a2003d8af",
+      "title": "Thermal Model Limitations",
+      "path": "notes/thermal-model-limitations.md",
+      "line": 1,
+      "source_paths": [
+        "notes/thermal-model-limitations.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-model-limitations.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Early-stage battery thermal models are useful for learning, screening, and review conversations, but their limits should be stated before results are used for design decisions.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-15bc4bf4dbcf",
+      "title": "Thermal Runaway Scope Boundary",
+      "path": "notes/thermal-runaway-scope-boundary.md",
+      "line": 1,
+      "source_paths": [
+        "notes/thermal-runaway-scope-boundary.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-runaway-scope-boundary.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for stating what thermal runaway topics are inside or outside a modeling note or analysis. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-6f4d63ccd901",
+      "title": "Thermal Source Confidence Guide",
+      "path": "notes/thermal-source-confidence-guide.md",
+      "line": 1,
+      "source_paths": [
+        "notes/thermal-source-confidence-guide.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-source-confidence-guide.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this guide to rank confidence in battery thermal sources before using them to support a BTMS claim, validation result, or modeling assumption.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-62f0700eeec7",
+      "title": "Transient Vs Steady State Guide",
+      "path": "notes/transient-vs-steady-state-guide.md",
+      "line": 1,
+      "source_paths": [
+        "notes/transient-vs-steady-state-guide.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/transient-vs-steady-state-guide.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for clarifying whether thermal results represent transient behavior or steady-state conditions. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    },
+    {
+      "id": "doc-1f7af6359278",
+      "title": "Validation Metric Selection Guide",
+      "path": "notes/validation-metric-selection-guide.md",
+      "line": 1,
+      "source_paths": [
+        "notes/validation-metric-selection-guide.md"
+      ],
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/validation-metric-selection-guide.md#L1",
+      "source_revision": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+      "source_kind": "audited-native-source",
+      "source_label": "Source at b76ca31619dd",
+      "catalog_url": null,
+      "native_url": null,
+      "excerpt": "Use this page for choosing model validation metrics that match the thermal claim and available evidence. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.",
+      "type": "Native reading",
+      "section": "scope",
+      "tags": [
+        "model",
+        "scope",
+        "verification"
+      ],
+      "track": null,
+      "lesson_id": null
+    }
+  ],
+  "commands": [
+    {
+      "command": "python -m unittest discover -s tests -v",
+      "label": "Source-defined validation command",
+      "path": ".github/workflows/markdown-maintenance.yml",
+      "line": 39,
+      "source_url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/.github/workflows/markdown-maintenance.yml#L39"
+    }
+  ],
+  "engineering_curriculum_exclusions": [
+    {
+      "path": "notes/pair-extraordinaire-loop-119-note.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-loop-115-note.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-loop-116-note.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-loop-117-note.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-loop-118-note.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-10.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-11.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-12.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-13.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-14.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-15.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-16.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-17.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-18.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-19.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-2.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-20.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-21.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-3.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-4.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-5.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-6.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-7.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-8.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    },
+    {
+      "path": "notes/pull-shark-wave-20260721164454-9.md",
+      "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+    }
+  ],
+  "visuals": {
+    "mapped_diagrams": [
+      {
+        "path": "diagrams/lumped-pouch-thermal.svg",
+        "fidelity": "Source-defined single-state lumped formulation; not a spatial solver."
+      }
+    ],
+    "section_banners": [
+      "section-01-question.svg",
+      "section-02-equations.svg",
+      "section-03-reproduce.svg",
+      "section-04-verification.svg",
+      "section-05-scope.svg"
+    ]
+  },
+  "native_document_banner_insertions": [
+    {
+      "path": "notes/heat-generation-model-selection.md",
+      "section": "equations",
+      "section_title": "Equations / provenance",
+      "banner": "docs/visuals/sections/section-02-equations.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+      "insert_after_heading": "Heat-Generation Model Selection",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/heat-generation-model-selection.md#L1",
+      "reason": "The existing heading 'Heat-Generation Model Selection' matches the equations / provenance section."
+    },
+    {
+      "path": "notes/btms-architecture-comparison.md",
+      "section": "question",
+      "section_title": "Question / topology",
+      "banner": "docs/visuals/sections/section-01-question.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-01-question.svg",
+      "insert_after_heading": "BTMS Architecture Comparison",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/btms-architecture-comparison.md#L1",
+      "reason": "The existing heading 'BTMS Architecture Comparison' matches the question / topology section."
+    },
+    {
+      "path": "notes/thermal-validation-example-result-summary.md",
+      "section": "verification",
+      "section_title": "Verification / output",
+      "banner": "docs/visuals/sections/section-04-verification.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-04-verification.svg",
+      "insert_after_heading": "Thermal Validation Example Result Summary",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-validation-example-result-summary.md#L1",
+      "reason": "The existing heading 'Thermal Validation Example Result Summary' matches the verification / output section."
+    },
+    {
+      "path": "notes/modeling-assumptions.md",
+      "section": "equations",
+      "section_title": "Equations / provenance",
+      "banner": "docs/visuals/sections/section-02-equations.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+      "insert_after_heading": "Battery Thermal Modeling Assumptions",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/modeling-assumptions.md#L1",
+      "reason": "The existing heading 'Battery Thermal Modeling Assumptions' matches the equations / provenance section."
+    },
+    {
+      "path": "notes/thermal-assumptions-example-table.md",
+      "section": "equations",
+      "section_title": "Equations / provenance",
+      "banner": "docs/visuals/sections/section-02-equations.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+      "insert_after_heading": "Thermal Assumptions Example Table",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-assumptions-example-table.md#L1",
+      "reason": "The existing heading 'Thermal Assumptions Example Table' matches the equations / provenance section."
+    },
+    {
+      "path": "notes/thermal-model-limitations.md",
+      "section": "scope",
+      "section_title": "Scope / limitations",
+      "banner": "docs/visuals/sections/section-05-scope.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-05-scope.svg",
+      "insert_after_heading": "Thermal Model Limitations",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-model-limitations.md#L1",
+      "reason": "The existing heading 'Thermal Model Limitations' matches the scope / limitations section."
+    },
+    {
+      "path": "notes/thermal-runaway-scope-boundary.md",
+      "section": "scope",
+      "section_title": "Scope / limitations",
+      "banner": "docs/visuals/sections/section-05-scope.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-05-scope.svg",
+      "insert_after_heading": "Thermal Runaway Scope Boundary",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-runaway-scope-boundary.md#L1",
+      "reason": "The existing heading 'Thermal Runaway Scope Boundary' matches the scope / limitations section."
+    },
+    {
+      "path": "notes/validation-metric-selection-guide.md",
+      "section": "verification",
+      "section_title": "Verification / output",
+      "banner": "docs/visuals/sections/section-04-verification.svg",
+      "markdown_relative_banner": "../docs/visuals/sections/section-04-verification.svg",
+      "insert_after_heading": "Validation Metric Selection Guide",
+      "heading_line": 1,
+      "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/validation-metric-selection-guide.md#L1",
+      "reason": "The existing heading 'Validation Metric Selection Guide' matches the verification / output section."
+    }
+  ],
+  "native_document_banner_audit": {
+    "schema_version": 1,
+    "eligibility_rule": "Tracked indexed Markdown in an examples, tutorials, lessons, studies, study-cases, concepts or notes directory, or whose path/title explicitly names a lesson, tutorial, example, walkthrough, study case or study. Banners are based only on existing semantic heading text, never directory names.",
+    "eligible_document_count": 14,
+    "lesson_document_candidates": 14,
+    "modified_document_count": 8,
+    "banner_insertion_count": 8,
+    "audit_gap_count": 6,
+    "banners": [
+      {
+        "path": "notes/heat-generation-model-selection.md",
+        "section": "equations",
+        "section_title": "Equations / provenance",
+        "banner": "docs/visuals/sections/section-02-equations.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+        "insert_after_heading": "Heat-Generation Model Selection",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/heat-generation-model-selection.md#L1",
+        "reason": "The existing heading 'Heat-Generation Model Selection' matches the equations / provenance section."
+      },
+      {
+        "path": "notes/btms-architecture-comparison.md",
+        "section": "question",
+        "section_title": "Question / topology",
+        "banner": "docs/visuals/sections/section-01-question.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-01-question.svg",
+        "insert_after_heading": "BTMS Architecture Comparison",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/btms-architecture-comparison.md#L1",
+        "reason": "The existing heading 'BTMS Architecture Comparison' matches the question / topology section."
+      },
+      {
+        "path": "notes/thermal-validation-example-result-summary.md",
+        "section": "verification",
+        "section_title": "Verification / output",
+        "banner": "docs/visuals/sections/section-04-verification.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-04-verification.svg",
+        "insert_after_heading": "Thermal Validation Example Result Summary",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-validation-example-result-summary.md#L1",
+        "reason": "The existing heading 'Thermal Validation Example Result Summary' matches the verification / output section."
+      },
+      {
+        "path": "notes/modeling-assumptions.md",
+        "section": "equations",
+        "section_title": "Equations / provenance",
+        "banner": "docs/visuals/sections/section-02-equations.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+        "insert_after_heading": "Battery Thermal Modeling Assumptions",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/modeling-assumptions.md#L1",
+        "reason": "The existing heading 'Battery Thermal Modeling Assumptions' matches the equations / provenance section."
+      },
+      {
+        "path": "notes/thermal-assumptions-example-table.md",
+        "section": "equations",
+        "section_title": "Equations / provenance",
+        "banner": "docs/visuals/sections/section-02-equations.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-02-equations.svg",
+        "insert_after_heading": "Thermal Assumptions Example Table",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-assumptions-example-table.md#L1",
+        "reason": "The existing heading 'Thermal Assumptions Example Table' matches the equations / provenance section."
+      },
+      {
+        "path": "notes/thermal-model-limitations.md",
+        "section": "scope",
+        "section_title": "Scope / limitations",
+        "banner": "docs/visuals/sections/section-05-scope.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-05-scope.svg",
+        "insert_after_heading": "Thermal Model Limitations",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-model-limitations.md#L1",
+        "reason": "The existing heading 'Thermal Model Limitations' matches the scope / limitations section."
+      },
+      {
+        "path": "notes/thermal-runaway-scope-boundary.md",
+        "section": "scope",
+        "section_title": "Scope / limitations",
+        "banner": "docs/visuals/sections/section-05-scope.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-05-scope.svg",
+        "insert_after_heading": "Thermal Runaway Scope Boundary",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/thermal-runaway-scope-boundary.md#L1",
+        "reason": "The existing heading 'Thermal Runaway Scope Boundary' matches the scope / limitations section."
+      },
+      {
+        "path": "notes/validation-metric-selection-guide.md",
+        "section": "verification",
+        "section_title": "Verification / output",
+        "banner": "docs/visuals/sections/section-04-verification.svg",
+        "markdown_relative_banner": "../docs/visuals/sections/section-04-verification.svg",
+        "insert_after_heading": "Validation Metric Selection Guide",
+        "heading_line": 1,
+        "source_link": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/notes/validation-metric-selection-guide.md#L1",
+        "reason": "The existing heading 'Validation Metric Selection Guide' matches the verification / output section."
+      }
+    ],
+    "audit_gaps": [
+      {
+        "path": "notes/cell-to-pack-scaling-note.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      },
+      {
+        "path": "notes/cooling-strategy-trade-study.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      },
+      {
+        "path": "notes/heat-rejection-pathway-map.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      },
+      {
+        "path": "notes/temperature-limit-rationale-note.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      },
+      {
+        "path": "notes/thermal-source-confidence-guide.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      },
+      {
+        "path": "notes/transient-vs-steady-state-guide.md",
+        "reason": "no existing heading matches a five-color section; retained as a source-linked catalog entry"
+      }
+    ],
+    "explicit_exclusions": [
+      {
+        "path": "notes/pair-extraordinaire-loop-119-note.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-loop-115-note.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-loop-116-note.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-loop-117-note.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-loop-118-note.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-10.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-11.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-12.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-13.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-14.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-15.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-16.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-17.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-18.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-19.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-2.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-20.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-21.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-3.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-4.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-5.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-6.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-7.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-8.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      },
+      {
+        "path": "notes/pull-shark-wave-20260721164454-9.md",
+        "reason": "achievement-only Pull Shark / Pair Extraordinaire badge-workflow note; excluded from engineering curriculum"
+      }
+    ]
+  },
+  "dashboard": {
+    "browser_lab_is_surrogate": true,
+    "native_execution_in_browser": false,
+    "localStorage_or_existing_dashboard_scripts_preserved": true
+  }
+}

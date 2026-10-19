@@ -1,175 +1,276 @@
-<div align="center">
+![Battery Thermal Reasoning Lab: original vector system illustration](assets/hero-25d.svg)
 
-<img src="assets/hero-25d.svg" alt="Battery Thermal Modeling Notes 2.5D Architecture" width="100%">
+Research notes and templates accompany a dependency-free thermal model with selectable integration methods and heat terms. The browser isolates the simplest linear balance before returning to the richer native reference.
 
-# Battery Thermal Modeling Notes
+**[Native-source lesson guide](docs/portfolio/) · [Offline interactive lab](docs/index.html) · [Lesson configuration](docs/lesson-config.json) · [Configuration schema](docs/lesson-config.schema.json)**
 
-**First-Principles BTMS Physics, Heat Generation & Validation Benchmarks**
+## Your first interactive result
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-00E5FF.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
-[![Interactive Dashboard](https://img.shields.io/badge/Interactive_Dashboard-Live_on_Pages-00E676.svg?style=for-the-badge&logo=githubpages&logoColor=white)](https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/)
-[![Lessons](https://img.shields.io/badge/Lessons_Configured-04_Modules-B388FF.svg?style=for-the-badge)](docs/lesson-config.json)
+1. Download or clone this repository and open `docs/index.html` in a modern browser.
+2. Select **Module 1**, apply its preset, and compare the declared checkpoint with the plotted result.
+3. Change one slider, inspect the model assumptions, then export the configuration or telemetry for your notes.
 
-<p align="center">
-  <a href="https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/"><strong>Explore Live 2.5D Dashboard &rarr;</strong></a> ·
-  <a href="#quickstart">Quickstart</a> ·
-  <a href="#lesson-configuration-matrix">Lesson Labs</a> ·
-  <a href="#verification-benchmarks">Benchmarks</a> ·
-  <a href="#citation">Citation</a>
-</p>
+The browser lab runs offline with no packages, accounts, or live data feeds. Its numbers are deterministic teaching simulations. Each checkpoint states its model time and tolerance; passing it demonstrates agreement with that model, not field calibration or production readiness.
 
-</div>
-
----
-
-> [!NOTE]
-> **Industrial & Educational Benchmark:** This repository serves as a flagship, peer-reviewed engineering asset developed by **[Mohammad Rezwan Khan](https://github.com/mohammadrezwankhan)**. All models, simulation scripts, and laboratory configurations are strictly audited for numerical convergence, reproducibility, and industrial standard compliance.
-
-> [!TIP]
-> **Interactive 2.5D Dashboard:** Visit the companion interactive dashboard hosted directly on GitHub Pages at **[https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/](https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/)** to adjust excitation parameters, test live frequency/thermal waveforms, and inspect progressive lab modules in real time.
-
----
-
-## 🏛️ System Architecture & 2.5D Visual Topology
-
-The repository is structured across three decoupled layers visually depicted in our 2.5D isometric platform:
-
-1. **Layer 01: Physical & Hardware Boundary Layer**
-   - Encapsulates electrochemical, thermal, and circuit hardware properties (cell chemistry, internal impedance, cooling cold-plate hydraulic dimensions, and transformer ratings).
-2. **Layer 02: Computational & Digital Twin Core**
-   - Solves coupled nonlinear differential equations, Kalman filtering state estimation, and model predictive control optimization algorithms with guaranteed mathematical boundedness.
-3. **Layer 03: Telemetry, Dispatch & Interactive API Layer**
-   - Exposes zero-friction CLI runners, interactive web dashboards, automated GitHub Actions regression verification suites, and production JSON configuration manifests.
-
-```
-       ▲  [LAYER 03: TELEMETRY & DISPATCH]   --> Web Dashboard, REST API, Automated CI
-      / \
-     ▲   ▲ [LAYER 02: NUMERICAL CORE]        --> Differential Solvers, EKF, Optimization
-    / \ / \
-   ▲   ▲   ▲ [LAYER 01: HARDWARE BOUNDS]     --> Equivalent Circuit, Thermal Mesh, Grid POI
-```
-
----
-
-## 🚀 Quickstart
-
-Run the full reproduction test suite locally with zero manual setup:
-
-```bash
-# Clone the repository
-git clone https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes.git
-cd battery-thermal-modeling-notes
-
-# Option A: Python Environment
-pip install -r requirements.txt
-python -m unittest discover -s tests -p "*_test.py"
-
-# Option B: Launch Local 2.5D Interactive Dashboard
-cd docs && python -m http.server 8080
-# Open http://localhost:8080 in your browser
-```
-
----
-
-## 📚 Lesson Configuration Matrix
-
-This repository includes a progressive 4-part industrial lab curriculum. Each lesson provides self-contained parameters, test scripts, and automated telemetry checkpoints stored in [`docs/lesson-config.json`](docs/lesson-config.json).
-
-| Lesson ID | Level | Duration | Module Target | Core Objective |
-| :--- | :--- | :--- | :--- | :--- |
-| **`L01`** | `Beginner` | `30 mins` | `parameters/bernardi_heat_spec.m` | Bernardi Reversible & Irreversible Heat Generation Modeling |
-| **`L02`** | `Intermediate` | `45 mins` | `parameters/thermal_network_1d.m` | 1D Lumped-Capacitance vs. Multi-Node Thermal Networks |
-| **`L03`** | `Advanced` | `60 mins` | `parameters/coldplate_hydraulics.m` | Liquid Cooling Plate Flow Velocity, Reynolds Number & Pressure Drop |
-| **`L04`** | `Production` | `75 mins` | `parameters/immersion_vs_plate.m` | Direct Immersion Dielectric Cooling vs. Bottom-Plate Benchmarking |
-
+<!-- source-mapped-visuals:start -->
 
 <details>
-<summary><strong>🔍 Click to expand detailed lesson specifications</strong></summary>
+<summary>System topology and model boundaries</summary>
 
-### L01: Bernardi Reversible & Irreversible Heat Generation Modeling
-- **Complexity Level:** `Beginner` | **Estimated Time:** `30 mins`
-- **Target File:** `parameters/bernardi_heat_spec.m`
-- **Objective:** Derive total heat flux Q_dot = I(V_ocv - V) - I*T*(dVocv/dT) separating entropic reversible cooling/heating from Joule resistance dissipation.
-- **Key Inputs:** Cell current profile I(t), Entropic coefficient dU/dT lookup curve vs SOC
-- **Calibrated Parameters:** `{"CellCapacity_Ah": 60.0, "EntropicCoeff_mV_K": -0.22, "NominalResistance_mohm": 0.95}`
-- **Verification Criteria:**
-  - [x] Observe entropic cooling during early charge phase
-  - [x] Validate total heat generation against calorimeter lab data
+![Lumped pouch thermal](assets/svg-2.5d/diagrams/lumped-pouch-thermal.svg)
 
-### L02: 1D Lumped-Capacitance vs. Multi-Node Thermal Networks
-- **Complexity Level:** `Intermediate` | **Estimated Time:** `45 mins`
-- **Target File:** `parameters/thermal_network_1d.m`
-- **Objective:** Evaluate Biot number criteria (Bi < 0.1) and quantify core-to-surface thermal lag in large-format prismatic and pouch cells.
-- **Key Inputs:** Cylindrical 4680 cell dimensions (r=23mm, h=80mm), Radial thermal conductivity kr = 0.8 W/m-K
-- **Calibrated Parameters:** `{"HeatCapacity_J_kgK": 1050.0, "CoreToSurfaceConductance_W_K": 2.8, "SurfaceToAmbient_h_W_m2K": 25.0}`
-- **Verification Criteria:**
-  - [x] Calculate Biot number Bi = 0.38 requiring 2-node model
-  - [x] Plot core vs skin temperature divergence at 4C continuous
+Source-defined single-state lumped formulation; not a spatial solver.
 
-### L03: Liquid Cooling Plate Flow Velocity, Reynolds Number & Pressure Drop
-- **Complexity Level:** `Advanced` | **Estimated Time:** `60 mins`
-- **Target File:** `parameters/coldplate_hydraulics.m`
-- **Objective:** Calculate friction factor (Darcy-Weisbach) and convective heat transfer coefficient across mini-channel cold plates.
-- **Key Inputs:** Extruded aluminum channel geometry, Coolant: 50% Ethylene Glycol / 50% Water
-- **Calibrated Parameters:** `{"HydraulicDiameter_mm": 3.8, "FlowRate_L_min": 6.5, "DynamicViscosity_Pa_s": 0.0032}`
-- **Verification Criteria:**
-  - [x] Verify laminar-to-turbulent transition safety margin
-  - [x] Ensure pressure drop remains below pump head capacity 35 kPa
-
-### L04: Direct Immersion Dielectric Cooling vs. Bottom-Plate Benchmarking
-- **Complexity Level:** `Production` | **Estimated Time:** `75 mins`
-- **Target File:** `parameters/immersion_vs_plate.m`
-- **Objective:** Comparative trade-off matrix: pumping power, heat rejection efficiency, thermal runaway barrier, and overall pack gravimetric density.
-- **Key Inputs:** Synthetic dielectric fluid (hydrocarbon/fluorochemical), Uniform pack thermal load 4.8 kW
-- **Calibrated Parameters:** `{"DielectricDielectricBreakdown_kV": 40.0, "FluidViscosity_cSt": 5.0, "CoolingEffectivenessRatio": 1.78}`
-- **Verification Criteria:**
-  - [x] Demonstrate 60% reduction in cell-to-cell delta T with immersion
-  - [x] Quantify weight penalty vs thermal runway containment gain
+Motion is optional; the vector topology remains readable with reduced motion enabled.
 
 </details>
 
----
+<!-- source-mapped-visuals:end -->
 
-## 📊 Verification Benchmarks
+## Four-module learning path
 
-| Metric Benchmark | Reference Baseline | Proposed Framework | Improvement | Verification Status |
-| :--- | :--- | :--- | :--- | :--- |
-| Estimation Error (RMSE) | 3.85% | **0.94%** | **-75.5% Error** | Passed CI Automated Suite |
-| Computational Runtime | 142 ms / step | **18 ms / step** | **7.8x Speedup** | Benchmarked on standard x86 |
-| Memory Footprint | 480 MB | **64 MB** | **-86.6% RAM** | Profiled via memory profiler |
-| Numerical Stability Margin | Divergence @ 10 kHz | **Stable to 100 kHz** | **10x Stability Window** | 100,000 Step Monte Carlo Run |
+| Module | Investigation | Approximate time |
+|---|---|---:|
+| 1. Declare the thermal control volume | Identify heat input, heat rejection, and stored energy before reading a temperature curve. | 12 min |
+| 2. Change thermal inertia alone | Distinguish a slower transient from a lower steady temperature. | 15 min |
+| 3. Move the boundary without changing generation | Separate ambient temperature from heat input and heat-transfer conductance. | 15 min |
+| 4. Choose a model and verification path | Decide which terms and numerical checks the next engineering question requires. | 18 min |
 
----
+**Who this is for:** Battery and BTMS learners reviewing heat sources, boundaries, numerical methods, and validation evidence.
 
-## 📜 Citation
+### Continue into the implementation
 
-If you use this repository, its models, or the accompanying interactive 2.5D curriculum in academic or industrial research, please cite:
+- [README.md](README.md)
+- [models/README.md](models/README.md)
+- [models/lumped_cell_thermal.py](models/lumped_cell_thermal.py)
+- [models/data/pulse_current_profile.csv](models/data/pulse_current_profile.csv)
+- [models/data/variable_cooling_profile.csv](models/data/variable_cooling_profile.csv)
+- [notes/modeling-assumptions.md](notes/modeling-assumptions.md)
+- [templates/thermal-parameter-traceability-matrix.md](templates/thermal-parameter-traceability-matrix.md)
 
-```bibtex
-@software{khan_battery_thermal_modeling_notes,
-  author       = {Mohammad Rezwan Khan},
-  title        = {{Battery Thermal Modeling Notes: First-Principles BTMS Physics, Heat Generation & Validation Benchmarks}},
-  year         = {2026},
-  publisher    = {GitHub},
-  journal      = {GitHub Repository},
-  howpublished = {\url{https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes}}
-}
+### Explore or run the source
+
+Python 3.12+ as documented for the native reference; no third-party runtime packages.
+
+```bash
+python models/lumped_cell_thermal.py --current-a 75 --duration-s 600 --integration-method exact-linear
+python models/lumped_cell_thermal.py --profile-csv models/data/pulse_current_profile.csv --output-csv results/pulse_thermal_intervals.csv
+python -m unittest discover -s tests -v
 ```
 
----
+These commands come from the audited source revision. Runtime requirements and the project's own validation limits are documented below; the standalone browser lab does not execute these commands.
 
-## ⭐ Star History
+The detailed project guide below remains the source for installation, supported features, licences, and scientific limits. The browser equations and laboratory settings do not change the original application or numerical engine.
 
-Join our growing community of engineers, researchers, and developers pushing open-source energy storage and computational modeling forward:
+<details>
+<summary>Project documentation, installation, attribution, and existing validation</summary>
 
-<div align="center">
-  <a href="https://star-history.com/#mohammadrezwankhan/battery-thermal-modeling-notes&Date">
-    <img src="https://api.star-history.com/svg?repos=mohammadrezwankhan/battery-thermal-modeling-notes&type=Date" alt="Star History Chart" width="80%">
-  </a>
-</div>
+# Battery Thermal Modeling Notes
 
----
+[![Model and Markdown validation](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml/badge.svg)](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/actions/workflows/markdown-maintenance.yml)
 
-<p align="center">
-  Distributed under the MIT License. Built with pride by <a href="https://github.com/mohammadrezwankhan"><strong>Mohammad Rezwan Khan</strong></a>.
-</p>
+Research-backed notes and reproducible examples for battery thermal behavior,
+BTMS design thinking, and validation assumptions.
+
+## Documentation Map
+
+- [Starter notes](#starter-notes) for the source-backed reading path.
+- [Executable reference](#run-the-executable-reference) for a dependency-free model run.
+- [Model assumptions and limitations](models/README.md) before reusing parameters or outputs.
+- [Contribution entry points](#contribution-entry-points) for focused improvements.
+- [Citation metadata](CITATION.cff) and [license](LICENSE) for shared work.
+
+## Focus Areas
+
+- Battery heat generation and thermal pathways.
+- BTMS architecture comparison.
+- Model assumptions and boundary conditions.
+- Validation checklists for simulation claims.
+- Reading notes from public literature.
+
+## Starter Notes
+
+- [Executable lumped cell thermal reference](models/README.md)
+
+- [Battery thermal modeling assumptions](notes/modeling-assumptions.md)
+- [BTMS architecture comparison](notes/btms-architecture-comparison.md)
+- [Heat-generation model selection](notes/heat-generation-model-selection.md)
+- [Thermal model limitations](notes/thermal-model-limitations.md)
+- [Thermal source confidence guide](notes/thermal-source-confidence-guide.md)
+- [Thermal assumptions example table](notes/thermal-assumptions-example-table.md)
+- [Thermal validation example result summary](notes/thermal-validation-example-result-summary.md)
+- [Battery thermal validation checklist](templates/validation-checklist.md)
+- [BTMS source checklist](templates/btms-source-checklist.md)
+- [Thermal validation decision log](templates/thermal-validation-decision-log.md)
+- [Thermal parameter traceability matrix](templates/thermal-parameter-traceability-matrix.md)
+- [Reading log template](references/reading-log-template.md)
+- [Reading log: NREL Li-ion thermal characterization](references/reading-log-nrel-li-ion-thermal-characterization.md)
+
+- [Cooling Loop Assumption Register](templates/cooling-loop-assumption-register.md)
+
+- [Thermal Test Data Quality Checklist](templates/thermal-test-data-quality-checklist.md)
+
+- [Cell To Pack Scaling Note](notes/cell-to-pack-scaling-note.md)
+
+- [Ambient Boundary Condition Log](templates/ambient-boundary-condition-log.md)
+
+- [Sensor Placement Review Template](templates/sensor-placement-review-template.md)
+
+- [Thermal Runaway Scope Boundary](notes/thermal-runaway-scope-boundary.md)
+
+- [BTMS Control Assumption Table](templates/btms-control-assumption-table.md)
+
+- [Heat Rejection Pathway Map](notes/heat-rejection-pathway-map.md)
+
+- [Validation Metric Selection Guide](notes/validation-metric-selection-guide.md)
+
+- [Uncertainty Review Checklist](templates/uncertainty-review-checklist.md)
+
+- [Literature Claim Extraction Template](references/literature-claim-extraction-template.md)
+
+- [Experimental Condition Comparison](templates/experimental-condition-comparison.md)
+
+- [Thermal Model Change Log](templates/thermal-model-change-log.md)
+
+- [Material Property Source Register](templates/material-property-source-register.md)
+
+- [Transient Vs Steady State Guide](notes/transient-vs-steady-state-guide.md)
+
+- [Cooling Strategy Trade Study](notes/cooling-strategy-trade-study.md)
+
+- [Temperature Limit Rationale Note](notes/temperature-limit-rationale-note.md)
+
+- [Data Gap Triage Checklist](templates/data-gap-triage-checklist.md)
+
+- [Validation Readiness Review](templates/validation-readiness-review.md)
+
+- [Research Next Questions Log](references/research-next-questions-log.md)
+
+## Repository Topics
+
+```text
+battery thermal-management btms bms electric-vehicles matlab simulink
+research-notes battery-modeling
+```
+
+## Suggested Structure
+
+```text
+notes/
+models/
+figures/
+references/
+README.md
+CONTRIBUTING.md
+CITATION.cff
+LICENSE
+```
+
+## Run The Executable Reference
+
+The dependency-free lumped model implements irreversible `I^2 R` heating,
+optional reversible entropic heat, a signed external heat-source profile,
+linear resistance-temperature feedback,
+piecewise-constant convection, an independently schedulable radiative
+surroundings boundary, optional nonlinear surface radiation, explicit Euler,
+exact linear, or bounded-step RK4 integration, and an energy-balance diagnostic:
+
+```powershell
+python models/lumped_cell_thermal.py --current-a 75 --duration-s 600
+python models/lumped_cell_thermal.py `
+  --current-a 75 --duration-s 600 --time-step-s 600 `
+  --integration-method exact-linear
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/pulse_current_profile.csv `
+  --output-csv results/pulse_thermal_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/ambient_step_current_profile.csv `
+  --output-csv results/ambient_step_thermal_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/irregular_current_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/irregular_thermal_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/reversible_heat_current_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/reversible_heat_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/variable_cooling_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/variable_cooling_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/external_heat_profile.csv `
+  --integration-method exact-linear `
+  --output-csv results/external_heat_intervals.csv
+python models/lumped_cell_thermal.py `
+  --profile-csv models/data/radiative_cooling_profile.csv `
+  --emissivity 0.85 --radiating-area-m2 0.03 `
+  --integration-method rk4 --rk4-max-step-s 0.5 `
+  --output-csv results/radiative_cooling_intervals.csv
+python models/lumped_cell_thermal.py `
+  --current-a 75 --duration-s 600 `
+  --temperature-limit-c 30 --temperature-limit-c 35 `
+  --limit-report-csv results/temperature-limits.csv
+python -m unittest discover -s tests -v
+```
+
+See the [model assumptions and limitations](models/README.md) before adapting
+the parameters or using the output in an engineering review. The profile path
+supports traceable charge/discharge duty cycles, optional interval ambient
+and radiative-surroundings temperatures, entropic coefficients, and
+external heat sources and heat-transfer coefficients, explicit nonuniform
+interval durations, optional diffuse-gray radiation, and interval-level CSV
+results. Repeatable temperature limits add first-crossing, exposure-duration,
+and peak-margin summaries without changing the thermal integration.
+
+## Scope and Limitations
+
+This repository is a research and teaching reference. Its notes, templates, and
+executable examples do not certify thermal runaway behavior, cell safety, BTMS
+performance, product compliance, or an operational temperature limit. Replace
+illustrative parameters with traceable project data and obtain independent
+engineering, safety, and standards review before making a design or field
+decision.
+
+## Citation
+
+If these notes or models support a paper, report, lecture, or design review, use
+the machine-readable [CITATION.cff](CITATION.cff) metadata and cite the specific
+note, model version, data source, and assumptions used.
+
+## Contribution Entry Points
+
+- Add a public reading-log entry.
+- Extend the BTMS architecture comparison with source-backed examples.
+- Add source-backed examples to the heat-generation model selection note.
+- Add mitigation examples to the thermal model limitations note.
+- Add source ranking examples to the thermal source confidence guide.
+- Adapt the thermal assumptions example table for a sourced case study.
+- Replace the thermal validation example summary with a sourced case study.
+- Add source-backed BTMS claim examples to the BTMS source checklist.
+- Improve validation checklist wording with units and boundary conditions.
+- Add real project decisions to the thermal validation decision log.
+- Add project-specific examples to the thermal parameter traceability matrix.
+- Add project-specific examples to the cooling loop assumption register.
+- Add project-specific examples to the thermal test data quality checklist.
+- Add project-specific examples to the cell to pack scaling note.
+- Add project-specific examples to the ambient boundary condition log.
+- Add project-specific examples to the sensor placement review template.
+- Add project-specific examples to the thermal runaway scope boundary.
+- Add project-specific examples to the btms control assumption table.
+- Add project-specific examples to the heat rejection pathway map.
+- Add project-specific examples to the validation metric selection guide.
+- Add project-specific examples to the uncertainty review checklist.
+- Add project-specific examples to the literature claim extraction template.
+- Add project-specific examples to the experimental condition comparison.
+- Add project-specific examples to the thermal model change log.
+- Add project-specific examples to the material property source register.
+- Add project-specific examples to the transient vs steady state guide.
+- Add project-specific examples to the cooling strategy trade study.
+- Add project-specific examples to the temperature limit rationale note.
+- Add project-specific examples to the data gap triage checklist.
+- Add project-specific examples to the validation readiness review.
+- Add project-specific examples to the research next questions log.
+- Add a sourced temperature-limit sensitivity case study.
+
+</details>

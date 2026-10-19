@@ -1,0 +1,10 @@
+{
+  "repository": "battery-thermal-modeling-notes",
+  "diagrams": [
+    "diagrams/lumped-pouch-thermal.svg"
+  ],
+  "fidelity": {
+    "diagrams/lumped-pouch-thermal.svg": "Source-defined single-state lumped formulation; not a spatial solver."
+  },
+  "reason": "Matches the documented lumped cell thermal formulation; spatial fields remain out of scope."
+}

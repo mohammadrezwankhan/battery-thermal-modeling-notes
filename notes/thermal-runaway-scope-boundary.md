@@ -1,5 +1,7 @@
 # Thermal Runaway Scope Boundary
 
+![Section 05 · Scope / limitations](../docs/visuals/sections/section-05-scope.svg)
+
 Use this page for stating what thermal runaway topics are inside or outside a modeling note or analysis. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.
 
 | Review Area | Prompt | Evidence Or Decision |

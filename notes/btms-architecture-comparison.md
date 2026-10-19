@@ -1,5 +1,7 @@
 # BTMS Architecture Comparison
 
+![Section 01 · Question / topology](../docs/visuals/sections/section-01-question.svg)
+
 Battery thermal management system (BTMS) choices should be compared against the operating profile, packaging constraints, service model, safety concept, and validation evidence available for the project.
 
 ## Comparison Table

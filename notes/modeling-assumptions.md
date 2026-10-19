@@ -1,5 +1,7 @@
 # Battery Thermal Modeling Assumptions
 
+![Section 02 · Equations / provenance](../docs/visuals/sections/section-02-equations.svg)
+
 This note captures assumptions that should be stated before presenting battery thermal simulation results.
 
 ## Cell-Level Assumptions

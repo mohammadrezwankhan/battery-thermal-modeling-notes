@@ -1,5 +1,7 @@
 # Thermal Validation Example Result Summary
 
+![Section 04 · Verification / output](../docs/visuals/sections/section-04-verification.svg)
+
 Use this note as a compact example for reporting thermal model results with enough context for review. Values below are placeholders and should be replaced with project, lab, or literature-backed data.
 
 ## Example Result Summary

@@ -1,5 +1,7 @@
 # Heat-Generation Model Selection
 
+![Section 02 · Equations / provenance](../docs/visuals/sections/section-02-equations.svg)
+
 Battery thermal models should use the simplest heat-generation representation that can answer the engineering question without hiding important operating-condition effects.
 
 ## Comparison

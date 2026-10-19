@@ -1,5 +1,7 @@
 # Thermal Assumptions Example Table
 
+![Section 02 · Equations / provenance](../docs/visuals/sections/section-02-equations.svg)
+
 Use this table as a compact example for documenting battery thermal model assumptions before sharing plots, simulation results, or design claims.
 
 ## Example Assumptions

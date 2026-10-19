@@ -1,5 +1,7 @@
 # Thermal Model Limitations
 
+![Section 05 · Scope / limitations](../docs/visuals/sections/section-05-scope.svg)
+
 Early-stage battery thermal models are useful for learning, screening, and review conversations, but their limits should be stated before results are used for design decisions.
 
 | Limitation | Potential Impact | Mitigation |

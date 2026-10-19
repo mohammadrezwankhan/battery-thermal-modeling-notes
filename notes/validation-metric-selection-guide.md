@@ -1,5 +1,7 @@
 # Validation Metric Selection Guide
 
+![Section 04 · Verification / output](../docs/visuals/sections/section-04-verification.svg)
+
 Use this page for choosing model validation metrics that match the thermal claim and available evidence. It helps keep battery thermal modeling notes explicit about sources, assumptions, limits, and validation impact.
 
 | Review Area | Prompt | Evidence Or Decision |
