@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "repository": "battery-thermal-modeling-notes",
+  "preserved_current_commit": "0ebd2bd9d12d3a2d9307e0d6a7e0dfbc1a4a3bc4",
+  "animations": [
+    {
+      "kind": "image",
+      "title": "Original floating-layer SVG",
+      "badge": "Earlier animated media",
+      "description": "Floating isometric tiers, pulsing circuits, and flowing dashed traces from the earlier repository hero.",
+      "format": "Animated SVG",
+      "preview": "media/hero-25d-cbf302005ff1.svg",
+      "preview_sha256": "a3ed86074a326435f241e5e27ca64b1fdeeca3eb8555f45bf6f8b7915c9e6583",
+      "motion_identity": "cbf302005ff16758600ba48f87605c7f6128d021de4d4865c66fd458b737e649",
+      "sources": [
+        {
+          "path": "assets/hero-25d.svg",
+          "commit": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+          "sha256": "5332b67552d165263da29499a5599a53d1f5eb03fb9779f6b91abde0bdf79fbf",
+          "blob": "27982adca5688c38dbe77de23a00cd71f9a253e3",
+          "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/assets/hero-25d.svg"
+        },
+        {
+          "path": "assets/hero-25d.svg",
+          "commit": "e5983480d5f49bfa894417174aa0b02378230eea",
+          "sha256": "ce990d6fb0f259ee224de68a3f112e7b89a77e25492ca78e4e6e8247bf67335c",
+          "blob": "d400139c8bcdeb346537d507dfe0374cbf223ac1",
+          "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/e5983480d5f49bfa894417174aa0b02378230eea/assets/hero-25d.svg"
+        }
+      ]
+    },
+    {
+      "kind": "waveform",
+      "title": "Original interactive waveform",
+      "badge": "Previous dashboard animation",
+      "description": "The earlier 2.5D perspective card and its moving waveform, with the original visual formulas and sliders.",
+      "preview": "waveform.html",
+      "preview_sha256": "7777dbc97367622f77c202ebab7e43026deecbc7e1d89dabe09847faa11edc62",
+      "sources": [
+        {
+          "path": "docs/index.html",
+          "commit": "b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1",
+          "blob": "dacfe26567829de3d7e312f73b88826af8a2ae52",
+          "sha256": "d80eacc2eac73fbbe2da5df0fd96c91fbfe7900bcc197282ab4374e6515f956a",
+          "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/b76ca31619dd2b2c8fe2e15b9bb1a53453aa3fa1/docs/index.html"
+        },
+        {
+          "path": "docs/index.html",
+          "commit": "e5983480d5f49bfa894417174aa0b02378230eea",
+          "blob": "27c5ba0dbb9c57b33f2f662a24b5fcc4bd5b0f7a",
+          "sha256": "ee8923d758a960f092e69758e5409299939df14af950c2a9ba90d1a7431e4170",
+          "url": "https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/e5983480d5f49bfa894417174aa0b02378230eea/docs/index.html"
+        }
+      ]
+    }
+  ],
+  "native_links": [],
+  "historical_source_links": []
+}
