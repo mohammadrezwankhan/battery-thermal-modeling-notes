@@ -9,7 +9,7 @@ Use this note as a compact example for reporting thermal model results with enou
 | Result Item | Placeholder Value | Unit | Review Note |
 |---|---|---|---|
 | Peak cell temperature | 38.5 | degC | Report where the peak occurs and at what time in the duty cycle. |
-| Maximum module gradient | 4.2 | degC | State whether the gradient is cell-to-cell, surface-to-core, or inlet-to-outlet. |
+| Maximum module gradient | 4.2 | degC | Placeholder only; a lumped model cannot estimate spatial gradients. Cite a separate spatial model or measurement. |
 | Ambient temperature | 25 | degC | Match the value used in the assumptions table. |
 | Duty cycle | 1C discharge pulse for 180 s | - | Include current sign convention and rest periods. |
 | Cooling condition | Forced air at 2.0 m/s | m/s | State whether the value is measured, specified, or assumed. |
@@ -28,5 +28,5 @@ Use this note as a compact example for reporting thermal model results with enou
 ## Suggested Summary Sentence
 
 ```text
-The starter model predicts a placeholder peak cell temperature of 38.5 degC and a maximum module gradient of 4.2 degC under a 1C discharge pulse at 25 degC ambient, using a lumped I^2R heat-source assumption and forced-air cooling boundary.
+The starter lumped model predicts a placeholder peak cell temperature of 38.5 degC under a 1C discharge pulse at 25 degC ambient, using a lumped I^2R heat-source assumption and forced-air cooling boundary. A 4.2 degC maximum module gradient would require a separate spatial model or measurement; it is not an output of the lumped model.
 ```
