@@ -1,0 +1,3 @@
+## CI economics and integrity
+
+Keep pull request validation enabled and restrict duplicate push validation only when the pull request event runs the same checks. Preserve required status contexts and producing job names, explicit release/publication branches, tag coverage, matrices, security scans and deployment gates. Keep lockfiles synchronized with manifests, grant workflows least privilege, and pin third-party actions to full commit SHAs. Bound jobs using a prior successful run as the baseline; record the run, duration and selected cap. If no usable successful baseline exists, do not guess a timeout. Retain transient pull request evidence only as long as review needs it, while preserving release evidence. Claim CI savings only from measured Actions usage.
