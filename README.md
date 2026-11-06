@@ -179,7 +179,8 @@ optional reversible entropic heat, a signed external heat-source profile,
 linear resistance-temperature feedback,
 piecewise-constant convection, an independently schedulable radiative
 surroundings boundary, optional nonlinear surface radiation, explicit Euler,
-exact linear, or bounded-step RK4 integration, and an energy-balance diagnostic:
+exact linear, or bounded-step RK4 integration, and an energy bookkeeping
+residual that does not estimate integration error:
 
 ```powershell
 python models/lumped_cell_thermal.py --current-a 75 --duration-s 600

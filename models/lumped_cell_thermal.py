@@ -251,11 +251,30 @@ class ThermalSimulation:
 
     @property
     def integrated_net_heat_j(self) -> float:
+        """Sum heat inferred from the integrator's temperature increments."""
+
         return sum(self.interval_net_heat_j)
 
     @property
-    def energy_balance_error_j(self) -> float:
+    def energy_bookkeeping_residual_j(self) -> float:
+        """Return the residual of the state-derived energy bookkeeping identity.
+
+        Interval heat is C * the computed temperature increment for every
+        integration method. This residual is therefore zero apart from
+        floating-point accumulation effects; it is not an independent heat
+        integral or an estimate of the temperature integration error.
+        """
+
         return abs(self.stored_energy_change_j - self.integrated_net_heat_j)
+
+    @property
+    def energy_balance_error_j(self) -> float:
+        """Compatibility alias for energy_bookkeeping_residual_j.
+
+        The historical name does not imply a numerical accuracy estimate.
+        """
+
+        return self.energy_bookkeeping_residual_j
 
     @property
     def duration_s(self) -> float:
@@ -939,6 +958,7 @@ def simulate_lumped_temperature(
         convective_rejected_heat.append(rates.convective_rejection_w)
         radiative_rejected_heat.append(rates.radiative_rejection_w)
         rejected_heat.append(rates.total_rejection_w)
+        # State-derived bookkeeping heat, not an independent error diagnostic.
         interval_net_heat.append(temperature_change_c * spec.thermal_capacity_j_per_k)
         temperatures.append(next_temperature_c)
 
@@ -1360,8 +1380,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if result.integration_method is IntegrationMethod.RK4:
         print(f"RK4 maximum internal step: {result.rk4_max_step_s:.6g} s")
     print(f"Stored thermal energy: {result.stored_energy_change_j:.3f} J")
-    print(f"Integrated net heat: {result.integrated_net_heat_j:.3f} J")
-    print(f"Energy-balance error: {result.energy_balance_error_j:.6e} J")
+    print(f"State-derived net heat: {result.integrated_net_heat_j:.3f} J")
+    print(
+        f"Energy bookkeeping residual: {result.energy_bookkeeping_residual_j:.6e} J "
+        "(not an integration-error estimate)"
+    )
     for assessment in limit_assessments:
         status = "EXCEEDED" if assessment.exceeded else "PASS"
         first_exceedance = (
