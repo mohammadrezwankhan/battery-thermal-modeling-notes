@@ -24,9 +24,10 @@ C_thermal = mass * specific_heat
 The default method advances temperature with an explicit Euler step. The
 optional exact linear method solves each interval analytically when current,
 ambient, entropic coefficient, and heat-transfer coefficient are piecewise
-constant. The returned result includes stored thermal energy, integrated net
-heat, and their absolute difference so discretization and implementation
-changes can be audited.
+constant. The returned result includes stored thermal energy, net heat derived
+from the computed temperature increments, and their absolute bookkeeping
+residual. This residual does not measure discretization error or independently
+validate the heat balance; see the distinction below.
 
 ## Run The Reference Case
 
@@ -50,6 +51,26 @@ Run the regression checks with:
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Energy Bookkeeping And Numerical Accuracy
+
+For every integration method, `interval_net_heat_j` is thermal capacity times
+the computed interval temperature increment. `integrated_net_heat_j` sums
+those values; it is not a separate quadrature of the heat rates. Comparing this
+sum with `C_thermal * (T_final - T_initial)` gives
+`energy_bookkeeping_residual_j`, which is zero apart from floating-point
+accumulation effects. A small residual does not establish numerical accuracy.
+The old `energy_balance_error_j` property remains a compatibility alias with
+the same value. The CLI now labels these quantities as state-derived net heat
+and the energy bookkeeping residual. CSV `net_heat_j` values are unchanged.
+
+For example, with thermal capacity 10 J/K, external heat 10 W, heat transfer
+1 W/K, ambient and initial temperature 20 degC, and no electrical heating, the
+analytic solution is `T(t) = 30 - 10 * exp(-t / 10)` degC. At 10 s it is
+26.3212056 degC. One 10 s Euler step gives 30 degC (3.6787944 degC error), while
+two 5 s steps give 27.5 degC (1.1787944 degC error). Both runs have a zero
+bookkeeping residual. Use an independent analytic solution where available,
+or a reviewed time-step refinement study, to assess integration accuracy.
 
 ## Exact Linear Integration
 
