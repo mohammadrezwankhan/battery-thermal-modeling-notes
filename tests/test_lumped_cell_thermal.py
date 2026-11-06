@@ -397,11 +397,48 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertAlmostEqual(result.temperature_c[-1], 64.815, places=12)
         self.assertAlmostEqual(result.interval_net_heat_j[0], 39_815.0, places=9)
 
-    def test_discrete_energy_balance_closes(self):
+    def test_discrete_energy_bookkeeping_closes(self):
         profile = [80.0] * 300 + [0.0] * 300
         result = simulate_lumped_temperature(profile)
         self.assertLess(result.energy_balance_error_j, 1e-8)
         self.assertGreater(result.temperature_c[300], result.temperature_c[-1])
+
+    def test_bookkeeping_residual_does_not_estimate_euler_integration_error(self):
+        # C=10 J/K, Q=10 W and h=1 W/K give T(t)=30-10*exp(-t/10).
+        # At 10 s, one Euler step reaches 30 C and two half steps reach 27.5 C;
+        # both close the state-derived energy identity despite different errors.
+        analytic_temperature_c = 30.0 - 10.0 * math.exp(-1.0)
+        temperature_errors = []
+        for step_s, intervals, expected_temperature_c in (
+            (10.0, 1, 30.0),
+            (5.0, 2, 27.5),
+        ):
+            with self.subTest(time_step_s=step_s):
+                result = simulate_lumped_temperature(
+                    [0.0] * intervals,
+                    LumpedThermalSpec(
+                        mass_kg=1.0,
+                        specific_heat_j_per_kg_k=10.0,
+                        resistance_ohm=0.0,
+                        external_heat_w=10.0,
+                        heat_transfer_w_per_k=1.0,
+                        ambient_temperature_c=20.0,
+                        initial_temperature_c=20.0,
+                        time_step_s=step_s,
+                    ),
+                )
+                self.assertEqual(result.temperature_c[-1], expected_temperature_c)
+                temperature_errors.append(
+                    abs(result.temperature_c[-1] - analytic_temperature_c)
+                )
+                self.assertEqual(result.energy_bookkeeping_residual_j, 0.0)
+                self.assertEqual(
+                    result.energy_balance_error_j,
+                    result.energy_bookkeeping_residual_j,
+                )
+        self.assertAlmostEqual(temperature_errors[0], 10.0 / math.e)
+        self.assertGreater(temperature_errors[1], 1.0)
+        self.assertLess(temperature_errors[1], temperature_errors[0])
 
     def test_default_resistance_trace_remains_constant(self):
         result = simulate_lumped_temperature([75.0] * 120)
@@ -1338,10 +1375,12 @@ class LumpedCellThermalTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         output = standard_output.getvalue()
         self.assertIn("Integration method: exact-linear", output)
-        energy_error_j = float(
-            output.split("Energy-balance error: ", 1)[1].split(" ", 1)[0]
+        bookkeeping_residual_j = float(
+            output.split("Energy bookkeeping residual: ", 1)[1].split(" ", 1)[0]
         )
-        self.assertLess(energy_error_j, 1e-9)
+        self.assertLess(bookkeeping_residual_j, 1e-9)
+        self.assertIn("not an integration-error estimate", output)
+        self.assertIn("State-derived net heat: ", output)
 
     def test_cli_uses_profile_ambient_in_export(self):
         with tempfile.TemporaryDirectory() as directory:
