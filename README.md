@@ -1,4 +1,4 @@
-![Battery Thermal Reasoning Lab: original vector system illustration](assets/hero-25d.svg)
+![Battery Thermal Reasoning Lab: original vector system illustration](assets/brand-uniformity/hero-25d.svg)
 
 Research notes and templates accompany a dependency-free thermal model with selectable integration methods and heat terms. The browser isolates the simplest linear balance before returning to the richer native reference.
 
@@ -23,7 +23,7 @@ The browser lab runs offline with no packages, accounts, or live data feeds. Its
 <details>
 <summary>System topology and model boundaries</summary>
 
-![Lumped pouch thermal](assets/svg-2.5d/diagrams/lumped-pouch-thermal.svg)
+![Lumped pouch thermal](assets/brand-uniformity/svg-2.5d/diagrams/lumped-pouch-thermal.svg)
 
 Source-defined single-state lumped formulation; not a spatial solver.
 
