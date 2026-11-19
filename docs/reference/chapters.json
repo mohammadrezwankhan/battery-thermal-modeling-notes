@@ -1,0 +1,143 @@
+{
+  "repository": "mohammadrezwankhan/battery-thermal-modeling-notes",
+  "source_sha": "37cb3c16069b21c373efc17ed202352ab69224dd",
+  "reviewed": "2026-11-19",
+  "title": "Battery thermal reference handbook",
+  "chapters": [
+    {
+      "path": "docs/INDEX.md",
+      "label": "Documentation index",
+      "group": "Orientation"
+    },
+    {
+      "path": "models/README.md",
+      "label": "Lumped Cell Thermal Reference",
+      "group": "Orientation"
+    },
+    {
+      "path": "docs/SOURCE_EVIDENCE.md",
+      "label": "Source evidence and coverage boundaries",
+      "group": "Orientation"
+    },
+    {
+      "path": "docs/developer/ARCHITECTURE.md",
+      "label": "Architecture and execution boundaries",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/SETUP_AND_REPRODUCIBILITY.md",
+      "label": "Setup and reproducibility",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/API_CLI_AND_INTERFACES.md",
+      "label": "APIs, CLI and data interfaces",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/WORKED_EXAMPLES_AND_LABS.md",
+      "label": "Worked examples and laboratories",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/TROUBLESHOOTING.md",
+      "label": "Troubleshooting",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/API_REFERENCE.md",
+      "label": "Native API reference",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/developer/BROWSER_MODEL_CATALOG.md",
+      "label": "Browser model and control inventory",
+      "group": "Developer"
+    },
+    {
+      "path": "docs/math-and-physics/EQUATIONS_AND_DERIVATIONS.md",
+      "label": "Implemented equations and explanatory derivations",
+      "group": "Science"
+    },
+    {
+      "path": "docs/math-and-physics/PARAMETERS_AND_SYMBOLS.md",
+      "label": "Parameters, symbols and units",
+      "group": "Science"
+    },
+    {
+      "path": "docs/math-and-physics/ASSUMPTIONS_AND_LIMITS.md",
+      "label": "Assumptions and validity limits",
+      "group": "Science"
+    },
+    {
+      "path": "docs/maintainer/VERIFICATION_EVIDENCE_LEDGER.md",
+      "label": "Verification evidence ledger",
+      "group": "Maintainer"
+    },
+    {
+      "path": "docs/maintainer/CI_CD_AND_RELEASE_PLAYBOOK.md",
+      "label": "CI, release and existing publication",
+      "group": "Maintainer"
+    },
+    {
+      "path": "docs/maintainer/TOOLCHAIN_AND_DEPENDENCY_MATRIX.md",
+      "label": "Toolchain and dependency matrix",
+      "group": "Maintainer"
+    },
+    {
+      "path": "docs/maintainer/FAILURE_MODES_AND_TECH_DEBT.md",
+      "label": "Failure modes and evidence-backed debt",
+      "group": "Maintainer"
+    },
+    {
+      "path": "docs/maintainer/DOCS_MAINTENANCE_RUNBOOK.md",
+      "label": "Documentation maintenance runbook",
+      "group": "Maintainer"
+    },
+    {
+      "path": "docs/owner/GOVERNANCE_AND_SCOPE.md",
+      "label": "Governance, ownership and scope",
+      "group": "Owner"
+    },
+    {
+      "path": "docs/owner/BUS_FACTOR_RECOVERY_RUNBOOK.md",
+      "label": "Recovery and continuity runbook",
+      "group": "Owner"
+    },
+    {
+      "path": "docs/owner/PORTFOLIO_INTEGRATION.md",
+      "label": "Portfolio integration",
+      "group": "Owner"
+    },
+    {
+      "path": "docs/owner/ADR/ADR-0000-INDEX.md",
+      "label": "Architecture decision index",
+      "group": "Owner"
+    },
+    {
+      "path": "ROADMAP.md",
+      "label": "Proposed development roadmap",
+      "group": "Project records"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "label": "Changelog",
+      "group": "Project records"
+    },
+    {
+      "path": "CITATION.cff",
+      "label": "Citation metadata",
+      "group": "Project records"
+    },
+    {
+      "path": "SECURITY.md",
+      "label": "Security and responsible reporting",
+      "group": "Project records"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "label": "Contributing",
+      "group": "Project records"
+    }
+  ]
+}

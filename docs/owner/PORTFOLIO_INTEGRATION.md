@@ -1,0 +1,19 @@
+# Portfolio integration
+
+> Reviewed 2026-11-19 against source `37cb3c16069b21c373efc17ed202352ab69224dd`. [Documentation index](../INDEX.md). This date identifies the review, not a release or deployment.
+
+This public repository contributes a battery thermal reasoning/reference-model component: one-state thermal dynamics, input-profile contracts, numerical verification examples and assumption/validation templates. The existing static lesson guide organizes four paths. Native model execution imports Python's standard library only; no implemented runtime coupling to another portfolio repository was identified. Shared names, visual styles or generic battery topics are not evidence of integration. [models/lumped_cell_thermal.py:1–10](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/lumped_cell_thermal.py#L1-L10); [docs/portfolio/README.md:1–17](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/docs/portfolio/README.md#L1-L17).
+
+| Interface suitable for a future reviewed connection | Current contract | Required mapping before reuse |
+|---|---|---|
+| Current and boundary schedules | Strict CSV interval starts, optional durations, current A and thermal fields | Timebase, sign, units, schedule completeness, measured/synthetic provenance |
+| Python model | `simulate_lumped_temperature` with immutable specification and optional schedules | One-node validity, thermal capacity, conductance, resistance/entropy evidence |
+| Interval results | State boundaries plus start heat rates and state-derived energy | Rate versus interval energy distinction; numerical resolution |
+| Limit assessments | Chord-interpolated exposure and signed margins | Project-authorized limits and event-time accuracy requirement |
+| Learning catalogue | Pinned source URLs and study plans | Preserve historical source identity; learning completion is not execution proof |
+
+Implementation: [models/lumped_cell_thermal.py:550–759](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/lumped_cell_thermal.py#L550-L759); [models/lumped_cell_thermal.py:996–1117](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/lumped_cell_thermal.py#L996-L1117); [models/lumped_cell_thermal.py:283–394](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/lumped_cell_thermal.py#L283-L394); [docs/portfolio/index.html:278–291](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/docs/portfolio/index.html#L278-L291).
+
+A future BESS dispatch/current pipeline could supply schedules, but that is a proposal requiring compatible electrical-to-current conversion, time alignment and calibrated thermal parameters; no such pipeline is implemented here. Keep thermal capacity in J/K distinct from electrical capacity in Ah/kWh, effective conductance in W/K distinct from a surface coefficient, and browser minutes distinct from native seconds. The public portfolio hub may reuse this repository's public source/evidence links and dated delivery status only; private or unknown-visibility evidence belongs in the separate owner record.
+
+Current public entry points are the [repository](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes), existing [GitHub Pages site](https://mohammadrezwankhan.github.io/battery-thermal-modeling-notes/) and [documentation index](../INDEX.md). Site availability and handbook publication must be verified for the delivered revision; a declared homepage is not that verification.
