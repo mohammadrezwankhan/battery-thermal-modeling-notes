@@ -281,3 +281,9 @@ note, model version, data source, and assumptions used.
 - Add a sourced temperature-limit sensitivity case study.
 
 </details>
+
+## Developer, maintainer and owner handbook
+
+The [documentation index](docs/INDEX.md) maps the native reference, public interfaces, equations, reproducible examples, verification evidence, recovery guidance and [twelve-month proposed roadmap](ROADMAP.md). The [static reading view](docs/reference/index.html) is derived from canonical Markdown and the existing CFF; it supplements the interactive lab and preserves the original model guide.
+
+This package reviews source `37cb3c16069b21c373efc17ed202352ab69224dd` on 2026-11-19. Native conductance is in W/K; a surface coefficient in W/(m²·K) needs an area-based mapping. Temperature-limit reports interpolate reported states and do not change the CLI success exit code. The [equations and numerical limits](docs/math-and-physics/EQUATIONS_AND_DERIVATIONS.md) and [verification ledger](docs/maintainer/VERIFICATION_EVIDENCE_LEDGER.md) explain these distinctions. Existing lesson/catalogue provenance identifies its own earlier snapshots.

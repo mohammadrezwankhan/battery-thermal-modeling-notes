@@ -1,0 +1,26 @@
+# Toolchain and dependency matrix
+
+> Reviewed 2026-11-19 against source `37cb3c16069b21c373efc17ed202352ab69224dd`. [Documentation index](../INDEX.md). This date identifies the review, not a release or deployment.
+
+| Component | Declared/source requirement | Observed review environment | Qualification |
+|---|---|---|---|
+| Native thermal engine/tests | Python 3.12+ in model guide; standard-library imports | Python 3.12.14/Linux; 85 tests and examples passed | No cross-version/OS support matrix demonstrated |
+| CI native runner | Ubuntu latest, Python 3.12 | Historical source checks observed; candidate CI separate | Image and selected patch versions may change |
+| Browser lab/catalogues | Modern browser, JavaScript/canvas/dialog; self-contained scripts | Pure active model evaluated in Node; static HTML/JSON inspected | No full GUI or browser-version compatibility claim |
+| Portfolio guide | Python standard-library validator; browser local storage optional | Four source-linked paths validated | Storage failure falls back to explicit plan export |
+| Static handbook | Python standard library plus Pandoc | Pandoc 3.1.11.1 for reviewed generation | Documentation-only authoring tool; no runtime dependency added |
+| Documentation schema checks | Official CFF 1.2.0 schema, repository lesson schema, JSON Schema validator, YAML parser | Separate review environment with functioning date/URI validators | Tooling outside native runtime; exact versions retained in handoff |
+| Link CI | SHA-pinned Lychee Action | Source arguments inspected | Action code must be inspected to establish its actual default Lychee binary version |
+| Git/Pages | Pinned GitHub Actions, existing Pages route | Source metadata/rules observed | Current branch permissions/reviews/deployment are delivery gates |
+
+Source: [models/README.md:32–53](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/README.md#L32-L53); [models/lumped_cell_thermal.py:1–10](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/models/lumped_cell_thermal.py#L1-L10); [tests/test_lumped_cell_thermal.py:1–22](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/tests/test_lumped_cell_thermal.py#L1-L22); [.github/workflows/markdown-maintenance.yml:28–89](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/.github/workflows/markdown-maintenance.yml#L28-L89); [scripts/portfolio/validate_guide.py:1–33](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/scripts/portfolio/validate_guide.py#L1-L33); [docs/portfolio/index.html:269–291](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/docs/portfolio/index.html#L269-L291).
+
+## Dependency and license boundaries
+
+There is no native package manifest or lockfile because the reference uses Python's standard library. Dependabot is configured weekly for GitHub Actions only, with five open PRs maximum; this is configuration, not an observed current queue. Actions are pinned to full commit SHAs; comments provide labels but do not independently establish downstream tool versions. [.github/dependabot.yml:1–7](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/.github/dependabot.yml#L1-L7); [.github/workflows/deploy-dashboard.yml:27–82](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/.github/workflows/deploy-dashboard.yml#L27-L82).
+
+The repository preserves the MIT license with 2026 Mohammad Rezwan Khan attribution and the existing CFF/CodeMeta metadata. The linked literature remains separately authored material; a link or reading note does not relicense a third-party paper, dataset or future measurement collection. The seven small CSVs are illustrative repository inputs; no measured external dataset is bundled. [LICENSE:1–21](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/LICENSE#L1-L21); [CITATION.cff:1–16](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/CITATION.cff#L1-L16); [references/reading-log-template.md:1–10](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/blob/37cb3c16069b21c373efc17ed202352ab69224dd/references/reading-log-template.md#L1-L10).
+
+## Reproducible documentation checks
+
+The CFF is preserved and validated using its declared official schema. The review uses a duplicate-key-rejecting YAML loader with string scalars, appropriate to this string-valued CFF, then Draft 7 schema validation with actual URI/date-time format validators. This does not claim general YAML 1.2 parser conformance. The lesson configuration is validated against its tracked schema; generated handbook input hashes and renderer version checks expose drift. No new runtime dependency file is introduced.
