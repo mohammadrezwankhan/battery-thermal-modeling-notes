@@ -6,7 +6,7 @@ The reviewed native model runs local calculations and writes files only to expli
 
 ## Reporting route
 
-The source did not define a private security contact, supported-version table or response-time commitment. For a nonsensitive reproducibility/documentation defect, use the repository's [issue tracker](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/issues) with a minimal synthetic example, source revision and expected/observed behavior. For a vulnerability that requires confidential details, first use a private reporting option only if the repository's current GitHub Security page offers it; otherwise obtain a confirmed private maintainer channel before disclosing exploit details or secrets. Availability of a private reporting feature has not been verified by this package.
+The source did not define a private security contact, supported-version table or response-time commitment. For a nonsensitive reproducibility/documentation defect, use the repository's [issue tracker](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/issues) with a minimal synthetic example, source revision and expected/observed behavior. For a vulnerability that requires confidential details, open [GitHub Security Advisories](https://github.com/mohammadrezwankhan/battery-thermal-modeling-notes/security/advisories) and select **Report a vulnerability**. If the option is unavailable, obtain a confirmed private maintainer channel before sharing sensitive details.
 
 ## Maintainer boundaries
 
